@@ -1,0 +1,39 @@
+# 一分钟启用 CI
+#
+# 这个文件刻意放在 ci/ 而不是 .github/workflows/，原因：
+# 用只有 repo scope 的 classic token 通过 API 写 .github/workflows/*.yml 会返回 404（不是 403），
+# GitHub 要求写 workflow 文件必须额外持有 workflow scope。
+#
+# 启用方式（任选其一）：
+#   1. 网页：打开本仓库 → Actions → New workflow → 粘贴下方内容
+#   2. 命令行：mkdir -p .github/workflows && cp ci/build.yml .github/workflows/build.yml && git push
+#
+# 注意：放进 .github/workflows 之后，这个文件会被 GitHub Actions 真正执行。
+
+name: build.yml
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Assemble
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
