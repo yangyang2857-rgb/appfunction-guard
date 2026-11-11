@@ -270,7 +270,7 @@ class GuardSymbolProcessor(
         }
 
         if (oneOf != null && typeName == "String") {
-            val values = stringValues(oneOf, "values")
+            val values = oneOf.stringValues("values")
             if (values.isNotEmpty()) {
                 val csv = values.joinToString(", ") { "\"" + it.escapeKotlin() + "\"" }
                 sb.append("        if (").append(varName).append(" !in listOf(").append(csv).append(")) {\n")
