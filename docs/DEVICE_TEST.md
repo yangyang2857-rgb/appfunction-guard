@@ -1,56 +1,141 @@
 # 真机验收清单
 
-CI 能证明的是"能构建、单测通过、CLI 能跑"，**证明不了**拦截链在真实 `AppFunctionService`
-上按预期工作 —— 因为 GitHub Actions 上没有 Android 设备，也装不了 Agent 宿主。
+CI 能证明的是"能构建、单测通过、CLI 能跑"，**证明不了**拦截链在真实设备上按预期工作。
 
-这份清单就是 CI 的盲区。整套做下来约 30 分钟。
+这份清单分两段，原因是这个项目目前的真实状态：
 
-## 需要什么
+| 阶段 | 验的是什么 | 前置条件 | 耗时 |
+|---|---|---|---|
+| **阶段 A** | guard 拦截链本身（策略、校验、确认、脱敏、限流、审计） | 一台 Android 8.0+ 手机，装 sample APK | 20 分钟 |
+| **阶段 B** | 与平台 AppFunctions 的接线（函数被系统收录、`adb` 直接调用、Agent 真实发起） | Android 16+ 设备 + 项目升级到 compileSdk 37 / AGP 9.1+ | 1～2 小时 + 一次构建改造 |
 
-| 项 | 要求 | 说明 |
-|---|---|---|
-| 设备 | Android 16（API 36），真机优先 | 模拟器可以跑通前 6 项，但 AppFunctions 的调用方鉴权在模拟器上可能与真机不同 |
-| 构建 | JDK 17 + Android SDK 36 | `gradle :sample:installDebug` |
-| 调用方 | 一个会调你 AppFunction 的 Agent / 宿主 | 没有的话用 `adb shell cmd app_function execute ...`（见下） |
-| 日志 | `adb logcat -s AFG:* AFG/Confirm:*` | 库的 tag 统一 `AFG/` 前缀 |
+阶段 A 不需要任何平台 API：sample 首页每个按钮都等价于一次 Agent 调用，走的是同一条
+`AfGuard.intercept(...)` 路径，只是调用方从"系统 Agent"换成了"你自己"。**策略、校验、
+确认、限流、脱敏、审计这六件事，在阶段 A 就能全部验完。**
 
-先装再跑：
+阶段 B 才是 `docs/` 里原本设想的那套端到端验收。它现在还做不了，卡点很具体（见文末
+"阶段 B 的前置条件"）。
+
+---
+
+## 阶段 A：不需要平台 API（先做这个）
+
+### 准备
 
 ```bash
+# 1. 拿 APK：CI 的 sample-debug-apk 产物，或自己构建
 gradle :sample:assembleDebug
 adb install -r sample/build/outputs/apk/debug/sample-debug.apk
-adb shell cmd app_function list            # 确认 sample 的函数已被平台收录
+
+# 2. 开一个 logcat 窗口，只留库的日志
+adb logcat -c && adb logcat -s AFG:V AFG/Confirm:V AndroidRuntime:E
 ```
 
-如果 `list` 里看不到函数，问题在清单/服务声明，不在库 —— 先照 sample/README.md 把
-`AppFunctionService` 注册好，再回来做这份清单。
+装好后打开 `AFG Sample`，从上往下点按钮，逐项对照。
 
-## 逐项检查
+### 逐项检查（10 项，全部可在此阶段完成）
 
-| # | 操作 | 期望 | 失败说明什么 |
+| # | 操作 | 期望 | 失败指向 |
 |---|---|---|---|
-| 1 | 调 `listNotes`（ALLOW 策略） | 直接返回数据，不弹窗；logcat 有一行 `ALLOWED` | 策略映射或 functionId 匹配错了 |
-| 2 | 调 `searchNotes` 传 `keyword` 超长 | 返回 `INVALID_ARGUMENT`，`field=keyword`，业务代码**没有**执行 | KSP 校验器没生效或参数名对不上 |
-| 3 | 调 `deleteNote` | 弹窗显示调用方包名 + 风险等级；点"允许"后执行 | 确认 UI 接线问题 |
-| 4 | 立刻再调一次 `deleteNote` | 不再弹窗（CONFIRM_ONCE 记 7 天） | 授权缓存失效 |
-| 5 | 调 `exportNotes` | 手机号在返回里是 `138****8000`，logcat 里也看不到原文 | 脱敏没覆盖到该字段 |
-| 6 | 调 `wipeAllNotes` | 不弹窗，直接 `FUNCTION_BLOCKED`，`retryable=false` | 阻断策略没生效 |
-| 7 | 连调 9 次 `deleteNote` | 前 5 次正常，第 6 次起 `RATE_LIMITED` 且带 `retryAfterMs` | 限流窗口/计数错 |
-| 8 | 弹窗放着不管，等超时 | 超时后**返回拒绝**；弹窗自动消失；点"允许"不会追溯改变结果 | 超时保护或残留弹窗处理有问题 |
-| 9 | 把 App 切到后台再触发 | 无界面时**拒绝**，不静默放行 | Activity 生命周期处理有问题 |
-| 10 | 打开 sample 首页的审计列表 | 每次调用一行，只有参数**形状/指纹**，没有原文 | 审计出口没接上（`GuardConfig.apply()` 漏了？） |
-| 11 | 杀进程后重新打开 | 审计记录按设计丢失（RingBuffer 是内存实现） | 属于预期，若要持久化换 `AuditSink` 实现 |
+| A1 | 点 `listNotes · ALLOW` | 立刻出结果，无弹窗，日志里一行 `ALLOWED` | 策略映射错 |
+| A2 | 点 `searchNotes("") · 校验` | 日志 `INVALID_ARGUMENT field=keyword`；**列表没变**（业务没执行） | KSP 校验器未生效 / 参数名不匹配 |
+| A3 | 点 `deleteNote · 待确认` | 弹窗显示调用方 + 风险等级；点"允许"后删除成功 | 确认 UI 未接线（`confirmationHandler.attach` 漏了） |
+| A4 | 紧接着再点一次 `deleteNote` | **不再弹窗**，直接执行 | 授权缓存（CONFIRM_ONCE，7 天）失效 |
+| A5 | 点 `exportNotes · 脱敏` | 返回值里手机号是 `138****8000`；logcat 里搜不到完整号码 | `redactOutput` 未生效 |
+| A6 | 点 `wipeAllNotes · 永久拒绝` | 不弹窗，日志 `DENIED_POLICY` / `FUNCTION_BLOCKED`，`retryable=false` | 阻断策略未命中 |
+| A7 | 点 `连发 9 次 deleteNote` | 前 5 次正常，第 6 次起 `RATE_LIMITED` 且带 `retryAfterMs` | 限流窗口/令牌桶参数 |
+| A8 | 触发 `deleteNote` 后**放着弹窗不动**，等 20 秒 | 超时后返回拒绝，弹窗自动消失；再点"允许"不改变结果 | 超时保护 / 弹窗残留 |
+| A9 | 按 Home 键回桌面，再触发确认类函数 | 拒绝，不静默放行 | Activity 生命周期（`detach` 后应为无界面即拒） |
+| A10 | 点 `查看最近 20 条审计` | 每次调用一行，只有参数**指纹/形状**，无原文 | `AuditSink` 未接（`GuardConfig.apply()` 漏了） |
 
-## 已知需要在真机上确认的行为
+补充两条只能靠"杀进程"来验的：
 
-- **第 2 项的参数名**：KSP 用函数 `simpleName` 作为 functionId，重载/同名函数会冲突（README 已列为已知限制）。真机上如果两个类都有 `deleteNote`，先确认命中哪一个。
-- **第 3 项的风险文案**：`Risk` 枚举的展示文案是 sample 自己拼的，不是库的契约。
-- **第 8 项的时序**：`confirmationTimeoutMillis` 默认 20s，sample 里设的同值；若你调到小于 1s，`DialogConfirmationHandler.MIN_TIMEOUT_MS` 会兜到 1s。
+| # | 操作 | 期望 |
+|---|---|---|
+| A11 | 点几次函数后 `adb shell am force-stop <包名>`，再打开看审计 | 记录清空 —— **这是设计**（RingBuffer 是内存实现），要持久化换 `AuditSink` |
+| A12 | 系统设置里把"显示弹窗"权限关掉，再触发确认类函数 | 拒绝而不是卡死（这验证的是 `DialogConfirmationHandler` 的降级路径） |
 
-## 实测记录（发布前填）
+### 常见失败与原因
 
-| 日期 | 设备 / 系统 | 结论 | 备注 |
-|---|---|---|---|
-| — | — | 未测 | `0.1.0-alpha3` 尚未在真机上跑过 |
+- **A3 点了没反应**：确认 `SampleApp` 里 `GuardConfig.confirmationHandler` 装的是
+  `DialogConfirmationHandler`，并且 `MainActivity.onCreate` 里调过 `attach(this)`。
+- **A2 不报错而是照样执行**：说明校验器没生成。`gradle :sample:kspDebugKotlin --info | grep afg`
+  看 KSP 有没有处理到该类。
+- **A7 计数不对**：限流状态挂在 `AfGuard` 的进程级单例上，热重载/多进程会重置。
 
-每一项通过就把这一行改成 `✅`，失败就写清失败项与 logcat 片段，然后开 issue。
+---
+
+## 阶段 B：接上真实 AppFunctions（当前做不了，卡点在下面）
+
+### 卡点
+
+`sample` 里**没有 `@AppFunction`，也没有 `AppFunctionService`**（`NoteFunctions.kt` 顶部的注释
+写明了这是刻意的：为了不让 `guard-core` 依赖 alpha 阶段的平台库）。因此现在把 APK 装到
+Android 16 设备上，跑：
+
+```bash
+adb shell cmd app_function list-app-functions
+```
+
+**结果里不会有这个 App 的任何函数。** 这不是 bug，是它还没接平台。
+
+要让函数出现在系统索引里，必须引 `androidx.appfunctions`，而这个库最新的几版（alpha10
+至 1.0.0-rc01）在 AAR 元数据里都硬性要求：
+
+```properties
+minCompileSdk=37
+minAndroidGradlePluginVersion=9.1.0
+```
+
+也就是说要动三处：`compileSdk 36 → 37`、`AGP 8.13.0 → 9.x`、新增 `appfunctions` 与
+`appfunctions-compiler`(KSP)。顺带 KSP 版本也要跟着 Kotlin/AGP 走。这是一次构建体系升级，
+不适合和"验证"混在一起做，建议单开一次提交。
+
+### 接好之后的命令（写法与现在文档里的旧版不同，注意）
+
+```bash
+# 列函数（旧文档里的 `cmd app_function list` 不存在）
+adb shell cmd app_function list-app-functions
+
+# 按包名过滤，看自己这一坨
+adb shell cmd app_function list-app-functions | grep -A 10 io.github.yangyang2857.afguard.sample
+
+# 直接执行一个函数
+adb shell "cmd app_function execute-app-function \
+  --package io.github.yangyang2857.afguard.sample \
+  --function 'io.github.yangyang2857.afguard.sample.NoteAppFunctionService#listNotes' \
+  --parameters '{\"limit\": 5}'"
+```
+
+> 这两个 `cmd app_function` 子命令是 **Android 17（API 37）** 才进平台的。Android 16 的设备
+> 上只有框架本身，没有 adb 入口 —— 那种设备上只能用官方 **AppFunctions Testing Agent**
+> （一个聊天界面的测试宿主，装上去说人话，它会真的检索并调用你暴露的函数）。
+
+### 接好之后的验收项
+
+| # | 操作 | 期望 |
+|---|---|---|
+| B1 | `list-app-functions` | 四个函数都在，参数/返回值有描述 |
+| B2 | `execute-app-function` 调 `listNotes` | 返回数据；审计里 `callerPackage` 是调用方而不是自己 |
+| B3 | 调 `deleteNote` | 弹窗里显示的是**真实调用方包名**；拒绝后函数返回 `ERROR_DENIED` |
+| B4 | 后台（无 Activity）时被调用 | 拒绝而非静默放行 |
+| B5 | 系统设置里关闭该 App 的 AppFunction | 调用方收到 `ERROR_DISABLED`，不进入确认流程 |
+
+---
+
+## 已知需要留意的地方
+
+- **functionId 的构造**：库内部按函数 `simpleName` 匹配（`deleteNote`），而平台生成的常量
+  是编译期拼出来的（形态类似 `NoteAppFunctionService#deleteNote`）。阶段 B 接线时必须确认
+  两者对得上，否则策略会全部落到默认分支 —— 这是接平台时最容易踩的一个坑。
+- **超时默认 20s**：`DialogConfirmationHandler.MIN_TIMEOUT_MS = 1s`，传更小的值会被兜到 1s。
+- **风险文案**：`Risk` 枚举的中文展示是 sample 自己拼的，不属于库的契约，改文案不影响行为。
+
+## 实测记录
+
+| 日期 | 设备 / 系统 | 阶段 | 结论 | 备注 |
+|---|---|---|---|---|
+| — | — | A | 未测 | `0.1.0-alpha3` 尚未在真机上跑过 |
+| — | — | B | 阻塞 | 需先升级 compileSdk 37 / AGP 9.1+ 并补 `AppFunctionService` |
+
+每验完一项就把对应行改成 `✅`，失败写清项号 + logcat 片段，然后开 issue。

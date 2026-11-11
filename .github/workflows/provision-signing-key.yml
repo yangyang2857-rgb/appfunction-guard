@@ -1,0 +1,99 @@
+# 一次性：给仓库生成 Maven Central 要用的 GPG 签名密钥。
+#
+# 为什么放在 Actions 里而不是让开发者本地跑：这台 runner 能连上 keyserver，
+# 而且生成完可以直接把私钥写进仓库 secret，人在手机也能完成。
+#
+# 用法：Actions → provision-signing-key → Run workflow
+#   email        签名身份用的邮箱（默认 GitHub noreply 地址，不会外泄真实邮箱）
+#   passphrase   私钥口令；留空则自动生成 32 位随机串（你不需要知道它，CI 自己用）
+#   admin_token  一个有 repo 权限的 classic PAT，仅本次运行用于写 secret，用完即弃
+#
+# 跑完之后仓库里会多出三个 secret：SIGNING_KEY / SIGNING_PASSWORD / GPG_FINGERPRINT。
+# 这三个 secret 不会出现在日志里；公钥会发到 keyserver，Central 靠它校验签名。
+
+name: provision-signing-key
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'GPG 身份邮箱'
+        required: true
+        default: 'yangyang2857-rgb@users.noreply.github.com'
+      passphrase:
+        description: '私钥口令（留空自动生成）'
+        required: false
+        default: ''
+      admin_token:
+        description: '有 repo 权限的 PAT（仅本次运行使用）'
+        required: true
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Generate key
+        env:
+          EMAIL: ${{ inputs.email }}
+          INPUT_PASS: ${{ inputs.passphrase }}
+        run: |
+          set -euo pipefail
+          PASS="$INPUT_PASS"
+          if [ -z "$PASS" ]; then
+            PASS=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 32)
+          fi
+          {
+            echo '%echo generating'
+            echo 'Key-Type: RSA'
+            echo 'Key-Length: 3072'
+            echo 'Key-Usage: sign'
+            echo 'Name-Real: AppFunction Guard Release'
+            echo "Name-Email: $EMAIL"
+            echo 'Expire-Date: 0'
+            echo "Passphrase: $PASS"
+            echo '%commit'
+            echo '%echo done'
+          } > /tmp/key.conf
+          gpg --batch --gen-key /tmp/key.conf
+          FPR=$(gpg --list-secret-keys --with-colons "$EMAIL" | awk -F: '/^fpr/{print $10; exit}')
+          echo "fingerprint: $FPR"
+          gpg --armor --export-secret-keys "$FPR" | base64 -w0 > /tmp/key.b64
+          echo "FPR=$FPR" >> "$GITHUB_ENV"
+          printf 'SIGN_PASS=%s\n' "$PASS" >> "$GITHUB_ENV"
+          echo "key size: $(wc -c </tmp/key.b64) bytes"
+
+      - name: Publish public key to keyservers
+        run: |
+          set -euo pipefail
+          for KS in hkps://keyserver.ubuntu.com hkp://pgp.mit.edu hkps://keys.openpgp.org; do
+            echo "--- $KS"
+            if timeout 60 gpg --keyserver "$KS" --send-keys "$FPR"; then
+              echo "uploaded to $KS"
+            else
+              echo "failed: $KS (non-fatal, Central checks several keyservers)"
+            fi
+          done
+
+      - name: Write repository secrets
+        env:
+          GH_TOKEN: ${{ inputs.admin_token }}
+        run: |
+          set -euo pipefail
+          gh secret set SIGNING_KEY --repo "$GITHUB_REPOSITORY" --body "$(cat /tmp/key.b64)"
+          gh secret set SIGNING_PASSWORD --repo "$GITHUB_REPOSITORY" --body "$SIGN_PASS"
+          gh secret set GPG_FINGERPRINT --repo "$GITHUB_REPOSITORY" --body "$FPR"
+          echo "secrets written: SIGNING_KEY, SIGNING_PASSWORD, GPG_FINGERPRINT"
+          gh secret list --repo "$GITHUB_REPOSITORY"
+
+      - name: Summary
+        run: |
+          {
+            echo "### 签名密钥就绪"
+            echo ""
+            echo "- fingerprint: \`$FPR\`"
+            echo "- 公钥已尝试发往 keyserver，Central 校验签名时会去查"
+            echo "- 三个 secret 已写入（值不可回读，属正常）"
+            echo ""
+            echo "下一步：Actions → publish-central → Run workflow"
+          } >> "$GITHUB_STEP_SUMMARY"

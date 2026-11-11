@@ -1,0 +1,88 @@
+# 真正上传到 Maven Central。手动触发，避免每次 push 都往 Central 送东西。
+#
+# 前置：
+#   1. 跑过 provision-signing-key，仓库里有 SIGNING_KEY / SIGNING_PASSWORD
+#   2. 仓库里有 MAVEN_CENTRAL_USERNAME / MAVEN_CENTRAL_PASSWORD
+#      （central.sonatype.com → Account → Generate User Token，别填登录密码）
+#   3. namespace io.github.yangyang2857 已在 Portal 验证过（用 GitHub 登录会自动完成）
+#
+# 产物：Central Portal 上的一个 deployment，publishingType 默认 AUTOMATIC（校验通过即发布）。
+
+name: publish-central
+
+on:
+  workflow_dispatch:
+    inputs:
+      hold:
+        description: '只上传不自动发布（留给你在 Portal 上点 Publish）'
+        type: boolean
+        default: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Install Android SDK packages
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          SDKMGR=$(ls -d "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" --install "platforms;android-36" "platform-tools" 2>&1 | tail -3 || true
+          for BT in 36.0.0 36.0.1 36.1.0 35.0.0; do
+            if "$SDKMGR" --install "build-tools;$BT" > /tmp/bt.log 2>&1; then break; fi
+          done
+          ls "$SDK/platforms" "$SDK/build-tools" || true
+
+      - name: Build signed bundle
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/*.sh
+          if [ -z "${SIGNING_KEY:-}" ]; then
+            echo "::error::SIGNING_KEY is empty — run provision-signing-key first"
+            exit 1
+          fi
+          ./scripts/make-central-bundle.sh
+
+      - name: Upload to Maven Central
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MAVEN_CENTRAL_USERNAME:-}" ] || [ -z "${MAVEN_CENTRAL_PASSWORD:-}" ]; then
+            echo "::error::MAVEN_CENTRAL_USERNAME / MAVEN_CENTRAL_PASSWORD are empty"
+            echo "在 https://central.sonatype.com/account 生成 User Token 后写进仓库 secret"
+            exit 1
+          fi
+          if [ "${{ inputs.hold }}" = "true" ]; then
+            ./scripts/upload-to-central.sh --hold
+          else
+            ./scripts/upload-to-central.sh
+          fi
+
+      - name: Keep bundle for inspection
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-bundle-signed
+          path: build/distributions/central-bundle.zip
+          if-no-files-found: warn
+          retention-days: 7

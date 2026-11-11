@@ -164,3 +164,53 @@ jobs:
           path: guard-cli/build/install/guard-cli/
           if-no-files-found: warn
           retention-days: 7
+
+  # 发布链路演练：不走 Sonatype 的 Nexus staging（OSSRH 已退役），直接产出 Central Portal
+  # 能吃的 zip，并把签名、POM 必填项、sources/javadoc 都验一遍。
+  # 用一次性密钥签名，只证明"链路通"，产出的 bundle 不能上架（公钥不在 keyserver 上）。
+  central-bundle:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Install Android SDK packages
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          SDKMGR=$(ls -d "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" --install "platforms;android-36" "platform-tools" 2>&1 | tail -3 || true
+          for BT in 36.0.0 36.0.1 36.1.0 35.0.0; do
+            if "$SDKMGR" --install "build-tools;$BT" > /tmp/bt.log 2>&1; then
+              echo "build-tools $BT installed"
+              break
+            fi
+          done
+          ls "$SDK/platforms" "$SDK/build-tools" || true
+
+      - name: Build and verify Central bundle
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/make-central-bundle.sh --ephemeral-key
+
+      - name: Upload bundle
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-bundle
+          path: build/distributions/central-bundle.zip
+          if-no-files-found: warn
+          retention-days: 7
