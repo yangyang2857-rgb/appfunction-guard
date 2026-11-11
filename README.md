@@ -191,6 +191,12 @@ If the KSP-generated table is missing (misconfigured build), validation is skipp
 
 ---
 
+## Field notes
+
+What actually broke during week 1, written down while it still hurt: [给 Android 的 AI 后门装锁：第一周踩坑记录](docs/blog/w1-field-notes.md) (中文)
+
+---
+
 ## Requirements
 
 - `compileSdk 36` (AGP 8.13+)
