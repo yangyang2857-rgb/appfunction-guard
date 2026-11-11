@@ -20,3 +20,4 @@ rootProject.name = "appfunction-guard"
 
 include(":guard-core")
 include(":guard-ksp")
+include(":sample")

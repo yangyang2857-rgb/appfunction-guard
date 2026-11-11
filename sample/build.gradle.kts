@@ -1,0 +1,38 @@
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
+}
+
+android {
+    namespace = "io.github.yangyang2857.afguard.sample"
+    compileSdk = libs.versions.compileSdk.get().toInt()
+
+    defaultConfig {
+        applicationId = "io.github.yangyang2857.afguard.sample"
+        minSdk = libs.versions.minSdk.get().toInt()
+        targetSdk = libs.versions.compileSdk.get().toInt()
+        versionCode = 1
+        versionName = "0.1.0"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+
+dependencies {
+    implementation(project(":guard-core"))
+    // 编译期生成校验器与元数据，运行时零反射解析
+    ksp(project(":guard-ksp"))
+}

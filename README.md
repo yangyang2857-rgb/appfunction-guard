@@ -5,7 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#status)
 [![Kotlin](https://img.shields.io/badge/kotlin-2.2-7F52FF.svg)](https://kotlinlang.org)
-[![minSdk 36](https://img.shields.io/badge/minSdk-36-green.svg)](#requirements)
+[![minSdk 26](https://img.shields.io/badge/minSdk-26-green.svg)](#requirements)
+[![build](https://github.com/yangyang2857-rgb/appfunction-guard/actions/workflows/build.yml/badge.svg)](https://github.com/yangyang2857-rgb/appfunction-guard/actions/workflows/build.yml)
 
 ---
 
@@ -85,6 +86,30 @@ fun deleteNote(@TextLimit(max = 64) id: String): Boolean = repo.delete(id)
 ```
 
 That's it. The annotations are read by KSP at build time; there is no reflection on the hot path.
+
+---
+
+## See it work
+
+`sample/` is a runnable app. Every button in it is one agent call going through `Guard.intercept()`:
+
+```bash
+gradle :sample:installDebug   # no wrapper in the repo; use local Gradle 8.13, or run `gradle wrapper` first
+```
+
+| Button | What you should see |
+|---|---|
+| `listNotes · ALLOW` | returns immediately, no dialog, one `ALLOWED` audit row |
+| `searchNotes("") · validate` | `INVALID_ARGUMENT` before your code runs, `field = keyword` |
+| `deleteNote · confirm` | dialog with caller + risk; approval remembered for 7 days |
+| `exportNotes · redact` | phone numbers come back as `138****8000` |
+| `wipeAllNotes · blocked` | no dialog at all, `FUNCTION_BLOCKED`, `retryable = false` |
+| `9x deleteNote` | first calls pass, then `RATE_LIMITED` with `retryAfterMs` |
+| `audit` | one row per call, argument *shape* only, never values |
+
+Setup notes, the real-device `AppFunctionService` wiring, and the two ways people get the confirmation dialog wrong: [sample/README.md](sample/README.md)
+
+---
 
 ---
 
@@ -192,10 +217,14 @@ Honest state of things:
 
 - [x] Core interception chain, policy engine, rate limiter, redactor, audit, error protocol
 - [x] KSP processor generating validators + metadata
+- [x] `sample/` — runnable demo app covering all four policies, rate limiting, redaction, audit viewer
+- [x] `sample/` — runnable demo app covering all four policies, rate limiting, redaction, audit viewer
 - [ ] **End-to-end verification on a real device** — built in an environment without an Android SDK, so it has not yet run against a live `AppFunctionService`
 - [ ] `guard-ui` — drop-in confirmation dialog
 - [ ] `guard-cli` — export audit records to CSV/JSON
 - [ ] Maven Central release
+
+CI: workflow is staged at [`ci/build.yml`](ci/build.yml) — it needs to be pasted into `.github/workflows/` once with a `workflow`-scoped token. Steps: [docs/CI.md](docs/CI.md)
 
 If you're here early: the interesting part is the *policy surface*, not the code volume. Feedback on the annotation design is more useful than bug reports right now.
 
