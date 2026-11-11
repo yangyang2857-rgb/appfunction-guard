@@ -2,9 +2,11 @@ import org.gradle.api.initialization.resolve.RepositoriesMode
 
 pluginManagement {
     repositories {
-        google()
-        mavenCentral()
         gradlePluginPortal()
+        mavenCentral()
+        maven("https://repo.maven.apache.org/maven2")
+        maven("https://plugins.gradle.org/m2")
+        google()
     }
 }
 
@@ -13,6 +15,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven("https://repo.maven.apache.org/maven2")
     }
 }
 

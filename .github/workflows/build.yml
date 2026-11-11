@@ -61,6 +61,18 @@ jobs:
           echo "--- installed after ---"
           ls "$SDK/platforms" "$SDK/build-tools" || true
 
+      - name: Diagnose plugin repositories
+        run: |
+          set -x
+          gradle --version || true
+          for R in "https://dl.google.com/dl/android/maven2" "https://repo.maven.apache.org/maven2" "https://plugins.gradle.org/m2"; do
+            U="$R/com/google/devtools/ksp/com.google.devtools.ksp.gradle.plugin/2.2.20-2.0.2/com.google.devtools.ksp.gradle.plugin-2.2.20-2.0.2.pom"
+            printf "%s -> " "$R"
+            curl -s -o /dev/null -w "%{http_code}\n" -L --max-time 30 "$U" || echo "curl-fail"
+          done
+          echo "--- gradle help ---"
+          gradle help --no-daemon --info 2>&1 | grep -iE "ksp|repository|resolv|https?://" | head -40 || true
+
       - name: Assemble
         run: gradle assembleDebug --stacktrace --no-daemon
 
