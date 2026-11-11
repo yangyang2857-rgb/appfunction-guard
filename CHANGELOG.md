@@ -2,6 +2,24 @@
 
 以 [Semantic Versioning](https://semver.org/) 管理。
 
+## [0.1.0-alpha2] - 2026-11-12
+
+第一次让 CI 真正跑通。alpha 版本是"能编译过"，这一版是"能构建、能出 APK、能测"。
+
+### Added
+- `.github/workflows/build.yml` 正式启用：装配 `guard-core` / `guard-ksp` / `sample`，跑单元测试，产出 `sample-debug-apk`
+- CI 失败时自动 dump KSP 生成源码，省掉靠猜生成代码的来回
+
+### Fixed
+- `annotation class Guard` 与 `object Guard` 在同一包重名 → 入口对象改名 `AfGuard`，注解保持更短的 `@Guard`；README / 中文文档 / sample / W1 文章同步
+- `CallerAllowList.isAllowed()` 在表达式函数体里用 `return`，改为块体
+- `PolicyEngine` 构造收到的是 `Long`（`GuardConfig.clock()` 的返回值）而不是 `() -> Long`，改为传函数引用 `GuardConfig.clock`
+- KSP `@OneOfVal` 生成的错误消息里直接拼了带引号的列表，产出 `"one of "plain", "json""`，字符串被腰斩；消息改用裸值拼接
+- KSP `@Pattern` 生成代码对 `$` 转义了两层，`"^[A-Za-z0-9_-]{1,64}$"` 的结尾锚点变成字面 `$`，正则在真机上会放行非法 id
+
+### Known limitations
+- 仍未在真机跑端到端验证，CI 只覆盖构建与单元测试。
+
 ## [0.1.0-alpha] - 2026-11-12
 
 首版。目标只有一个：**把拦截链跑通**，不追求功能齐全。

@@ -230,7 +230,7 @@ Honest state of things:
 - [ ] `guard-cli` — export audit records to CSV/JSON
 - [ ] Maven Central release
 
-CI: workflow is staged at [`ci/build.yml`](ci/build.yml) — it needs to be pasted into `.github/workflows/` once with a `workflow`-scoped token. Steps: [docs/CI.md](docs/CI.md)
+CI: [`build.yml`](.github/workflows/build.yml) runs on every push to `main` — assembles all three modules, runs unit tests, and uploads `sample-debug-apk`. Details: [docs/CI.md](docs/CI.md)
 
 If you're here early: the interesting part is the *policy surface*, not the code volume. Feedback on the annotation design is more useful than bug reports right now.
 
