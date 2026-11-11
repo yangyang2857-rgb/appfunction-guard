@@ -223,7 +223,7 @@ Honest state of things:
 
 - [x] Core interception chain, policy engine, rate limiter, redactor, audit, error protocol
 - [x] KSP processor generating validators + metadata
-- [x] `sample/` — runnable demo app covering all four policies, rate limiting, redaction, audit viewer
+- [x] CI on GitHub Actions — green build, unit tests, sample APK artifact
 - [x] `sample/` — runnable demo app covering all four policies, rate limiting, redaction, audit viewer
 - [ ] **End-to-end verification on a real device** — built in an environment without an Android SDK, so it has not yet run against a live `AppFunctionService`
 - [ ] `guard-ui` — drop-in confirmation dialog
