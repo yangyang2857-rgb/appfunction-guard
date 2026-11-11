@@ -276,7 +276,8 @@ class GuardSymbolProcessor(
                 sb.append("        if (").append(varName).append(" !in listOf(").append(csv).append(")) {\n")
                 sb.append("            return GuardError.invalidArgument(\"").append(functionId)
                     .append("\", \"").append(p.name)
-                    .append("\", \"value not allowed\", \"one of ").append(csv).append("\")\n")
+                    .append("\", \"value not allowed\", \"one of ")
+                    .append(values.joinToString(", ")).append("\")\n")
                 sb.append("        }\n")
             }
         }
@@ -306,5 +307,5 @@ class GuardSymbolProcessor(
     private fun String.escapeKotlin(): String =
         replace("\\", "\\\\")
             .replace("\"", "\\\"")
-            .replace("\u0024", "\\\u0024")
+            .replace("\u0024", "\\" + "\u0024")
 }
