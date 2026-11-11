@@ -7,7 +7,10 @@ minSdk = "26"
 
 [libraries]
 androidx-core = { module = "androidx.core:core-ktx", version = "1.17.0" }
-androidx-annotation = { module = "androidx.annotation:annotation", version = "1.9.1" }
+# annotation 固定 1.8.1：core-ktx 1.17.0 及其传递依赖把 runtime classpath 解析到 1.8.1，
+# Android 的 consistent resolution 会据此对 compile classpath 施加 strictly 约束，
+# 显式写 1.9.1（KMP 分叉版本）会直接冲突 "Cannot find a version that satisfies"。
+androidx-annotation = { module = "androidx.annotation:annotation", version = "1.8.1" }
 ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
 
 [plugins]
