@@ -10,6 +10,10 @@
 #   SIGNING_KEY       ASCII-armored 私钥，base64 编码后的一行字符串
 #   SIGNING_PASSWORD  私钥口令（无口令留空）
 #
+# 签名方式：脚本自己用 gpg 对暂存目录里每个文件做分离签名（--detach-sign --armor），
+# 不走 Gradle 的 signing 插件——Gradle 内置 BouncyCastle 对部分 gpg 版本导出的私钥
+# 会报 "Could not read PGP secret key"，用它签会卡在这里，而 Central 只认 .asc 文件本身。
+#
 # 产物：build/distributions/central-bundle.zip
 set -euo pipefail
 
@@ -68,10 +72,10 @@ fi
 # --------------------------------------------------------------------------
 if [ "$VERIFY_ONLY" -eq 0 ]; then
   GRADLE_ARGS=(centralBundle --no-daemon --stacktrace)
-  if [ -n "${SIGNING_KEY:-}" ]; then
-    GRADLE_ARGS+=("-PsigningKey=$SIGNING_KEY")
-    [ -n "${SIGNING_PASSWORD:-}" ] && GRADLE_ARGS+=("-PsigningPassword=$SIGNING_PASSWORD")
-  else
+  # 注意：这里故意不把私钥交给 Gradle。Gradle 内置的 BouncyCastle 读不了某些 gpg 版本
+  # 导出的私钥（报 "Could not read PGP secret key"），签名统一放到 2.5 步用 gpg 做分离签名，
+  # 既绕开兼容问题，也让校验环节能直接用 gpg --verify 验签。
+  if [ -z "${SIGNING_KEY:-}" ]; then
     echo "WARNING: SIGNING_KEY is empty — the bundle will lack .asc files and Central will reject it."
   fi
   if command -v gradle >/dev/null 2>&1; then
@@ -79,6 +83,38 @@ if [ "$VERIFY_ONLY" -eq 0 ]; then
   else
     ./gradlew "${GRADLE_ARGS[@]}"
   fi
+fi
+
+# --------------------------------------------------------------------------
+# 2.5 分离签名 + 重新打包
+# --------------------------------------------------------------------------
+if [ "$VERIFY_ONLY" -eq 0 ] && [ -n "${SIGNING_KEY:-}" ]; then
+  if [ -z "${GNUPGHOME:-}" ] || [ -z "$(gpg --list-secret-keys 2>/dev/null)" ]; then
+    GNUPGHOME=$(mktemp -d)
+    export GNUPGHOME
+    chmod 700 "$GNUPGHOME"
+    printf '%s' "$SIGNING_KEY" | base64 -d | gpg --batch --quiet --import
+  fi
+
+  echo "signing artifacts with gpg ..."
+  SIGNED_FILES=0
+  while IFS= read -r -d '' F; do
+    case "$F" in *.asc) continue ;; esac
+    case "$F" in *maven-metadata.xml*) continue ;; esac
+    if [ -n "${SIGNING_PASSWORD:-}" ]; then
+      gpg --batch --yes --armor --detach-sign --pinentry-mode loopback \
+        --passphrase "$SIGNING_PASSWORD" -o "$F.asc" "$F"
+    else
+      gpg --batch --yes --armor --detach-sign -o "$F.asc" "$F"
+    fi
+    SIGNED_FILES=$((SIGNED_FILES + 1))
+  done < <(find "$STAGE" -type f -print0)
+  echo "signed $SIGNED_FILES files"
+
+  rm -f "$BUNDLE"
+  mkdir -p "$(dirname "$BUNDLE")"
+  ( cd "$STAGE" && zip -qry "$REPO_ROOT/$BUNDLE" . -x "io/github/yangyang2857/*/maven-metadata.xml*" )
+  echo "rebuilt bundle with .asc files"
 fi
 
 # --------------------------------------------------------------------------
