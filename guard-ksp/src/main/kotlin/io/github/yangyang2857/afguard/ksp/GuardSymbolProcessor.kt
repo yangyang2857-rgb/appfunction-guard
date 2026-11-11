@@ -270,12 +270,14 @@ class GuardSymbolProcessor(
         }
 
         if (oneOf != null && typeName == "String") {
-            val values = (oneOf.arg("values")?.value as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+            val values = stringValues(oneOf, "values")
             if (values.isNotEmpty()) {
-                val csv = values.joinToString(", ") { "\"${it.escapeKotlin()}\"" }
-                sb.appendLine("        if ($varName !in listOf($csv)) {")
-                sb.appendLine("            return GuardError.invalidArgument(\"$functionId\", \"${p.name}\", \"value not allowed\", \"one of $csv\")")
-                sb.appendLine("        }")
+                val csv = values.joinToString(", ") { "\"" + it.escapeKotlin() + "\"" }
+                sb.append("        if (").append(varName).append(" !in listOf(").append(csv).append(")) {\n")
+                sb.append("            return GuardError.invalidArgument(\"").append(functionId)
+                    .append("\", \"").append(p.name)
+                    .append("\", \"value not allowed\", \"one of ").append(csv).append("\")\n")
+                sb.append("        }\n")
             }
         }
 
@@ -288,6 +290,17 @@ class GuardSymbolProcessor(
         }
 
         return sb.toString()
+    }
+
+    /** 注解里的 Array<String> 在 KSP 里可能是 List<*>，也可能是 Array<*>，两种都兜住。 */
+    private fun KSAnnotation.stringValues(name: String): List<String> {
+        val raw = arg(name)?.value ?: return emptyList()
+        val items = when (raw) {
+            is List<*> -> raw
+            is Array<*> -> raw.toList()
+            else -> return emptyList()
+        }
+        return items.mapNotNull { it as? String }
     }
 
     private fun String.escapeKotlin(): String =

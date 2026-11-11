@@ -79,6 +79,12 @@ jobs:
       - name: Unit tests
         run: gradle testDebugUnitTest --stacktrace --no-daemon
 
+      - name: Dump generated KSP sources
+        if: failure()
+        run: |
+          echo "--- generated ksp sources ---"
+          find . -path "*generated/ksp*" -name "*.kt" -print -exec cat {} \; || true
+
       - name: Upload sample APK
         if: always()
         uses: actions/upload-artifact@v4
