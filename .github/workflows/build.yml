@@ -1,0 +1,52 @@
+# Android library build: guard-core + guard-ksp + sample
+# Requires AGP 8.13 / Gradle 8.13 / compileSdk 36
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses > /dev/null || true
+
+      - name: Assemble
+        run: gradle assembleDebug --stacktrace --no-daemon
+
+      - name: Unit tests
+        run: gradle testDebugUnitTest --stacktrace --no-daemon
+
+      - name: Upload sample APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-debug-apk
+          path: sample/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+          retention-days: 7
