@@ -172,8 +172,8 @@ KSP 生成的表缺失时（构建配置错了），校验被跳过，但每条�
 
 ```kotlin
 dependencies {
-    implementation("com.github.yangyang2857.appfunction-guard:guard-core:0.1.0-alpha")
-    ksp("com.github.yangyang2857.appfunction-guard:guard-ksp:0.1.0-alpha")
+    implementation("com.github.yangyang2857-rgb.appfunction-guard:guard-core:0.1.0-alpha")
+    ksp("com.github.yangyang2857-rgb.appfunction-guard:guard-ksp:0.1.0-alpha")
 }
 ```
 
