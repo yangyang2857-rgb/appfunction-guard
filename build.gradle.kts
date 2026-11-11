@@ -59,6 +59,12 @@ subprojects {
             }
         }
 
+        // 没有密钥时必须显式关掉，否则任何被挂进任务图的 sign 任务都会报
+        // "Could not read PGP secret key"。
+        sub.extensions.configure<SigningExtension> {
+            isRequired = signingKeyValue != null
+        }
+
         if (signingKeyValue != null) {
             // guard-core / guard-ui 的 publication 是在 afterEvaluate 里建的，这里必须等
             // 全部项目脚本求值完再签名，否则会签到一个空集合上。
