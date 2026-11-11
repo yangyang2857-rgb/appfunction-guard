@@ -40,7 +40,7 @@ object AfGuard {
 
     private val rateLimiter = RateLimiter { GuardConfig.clock() }
 
-    private fun policyEngine() = PolicyEngine(GuardConfig.consentStore, GuardConfig.clock())
+    private fun policyEngine() = PolicyEngine(GuardConfig.consentStore, GuardConfig.clock)
 
     /**
      * 执行一次受保护的调用。
