@@ -120,6 +120,25 @@ jobs:
           cat /tmp/afg/usage.txt
           test "$CODE" -eq 2
 
+      # 发布链路自查：不碰密钥、不联网校验，只确认 POM / sources / javadoc 三件套齐不齐。
+      # 真正上传 Central 需要 Sonatype 凭据与 GPG 密钥，见 docs/PUBLISHING.md。
+      - name: Publication metadata
+        run: |
+          set -euo pipefail
+          gradle publishAllToLocal --stacktrace --no-daemon
+          V=0.1.0-alpha3
+          for M in guard-audit guard-core guard-ksp guard-ui; do
+            D="$HOME/.m2/repository/io/github/yangyang2857/$M/$V"
+            echo "--- $M ---"
+            ls -1 "$D" || { echo "missing directory: $M"; exit 1; }
+            test -f "$D/$M-$V.pom"          || { echo "missing pom: $M"; exit 1; }
+            test -f "$D/$M-$V-sources.jar"  || { echo "missing sources: $M"; exit 1; }
+            test -f "$D/$M-$V-javadoc.jar"  || { echo "missing javadoc: $M"; exit 1; }
+            grep -q "MIT License" "$D/$M-$V.pom" || { echo "pom license missing: $M"; exit 1; }
+            grep -q "github.com/yangyang2857-rgb/appfunction-guard" "$D/$M-$V.pom" || { echo "pom scm missing: $M"; exit 1; }
+          done
+          echo "publication metadata OK"
+
       - name: Dump generated KSP sources
         if: failure()
         run: |
@@ -128,6 +147,7 @@ jobs:
 
       - name: Upload sample APK
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: sample-debug-apk
@@ -137,6 +157,7 @@ jobs:
 
       - name: Upload CLI distribution
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: guard-cli

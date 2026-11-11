@@ -13,55 +13,84 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * 用系统 AlertDialog 做"要不要允许这次调用"的确认。
  *
- * 为什么不是默认实现：库本身不替宿主编排 UI 生命周期（Activity 可能被回收、App 可能没有
- * 前台界面），所以 core 只留一个 fun interface。这里给一份能直接用的实现。
+ * 库本身不替宿主编排 UI（Activity 可能被回收、App 可能没有前台界面），core 只留一个
+ * fun interface；这里给一份能直接用的实现。
  *
- * 已知的两个坑，都在代码里处理了：
+ * 三个坑，都在代码里处理了：
  * 1. **主线程调用必然死锁** —— 弹窗要主线程，而主线程正卡在 [confirm] 里等结果。直接判否，
- *    让 Guard 走 DENIED_USER 而不是卡死 Agent。
- * 2. **超时后弹窗还挂着** —— 用户点"允许"时调用早已结束，策略不能因此变成同意。所以用
- *    [AtomicBoolean] 记真实点击，超时返回 false；弹窗本身 dismiss 掉。
+ *    让调用走 DENIED_USER，而不是把 Agent 卡死到超时。
+ * 2. **超时后弹窗还挂着** —— 用户点"允许"时调用早已结束，策略不能因此变成同意。用
+ *    [AtomicBoolean] 记真实点击，超时返回 false，并把残留弹窗 dismiss 掉。
+ * 3. **Activity 被回收** —— 支持 [attach]/[detach] 跟随生命周期；没有可见界面时一律拒绝，
+ *    绝不静默放行。
  */
-class DialogConfirmationHandler(
-    private val activity: () -> Activity?,
+class DialogConfirmationHandler @JvmOverloads constructor(
+    private val provider: (() -> Activity?)? = null,
     private val copy: Prompts = Prompts.Default
 ) : ConfirmationHandler {
 
+    @Volatile
+    private var host: Activity? = null
+
+    @Volatile
+    private var dialog: AlertDialog? = null
+
+    /** 跟随 Activity 生命周期。调用方在 onCreate 里接、onDestroy 里松。 */
+    fun attach(activity: Activity) {
+        host = activity
+    }
+
+    fun detach(activity: Activity) {
+        if (host !== activity) return
+        host = null
+        val pending = dialog
+        dialog = null
+        if (pending != null) post { runCatching { pending.dismiss() } }
+    }
+
     override fun confirm(request: ConfirmRequest): Boolean {
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            // 不要在调用线程上等主线程，那是在等自己。
+            // 不要在调用线程上等主线程 —— 那是在等自己。
             return false
         }
-        val host = activity() ?: return false
+        val target = host ?: provider?.invoke() ?: return false
 
         val latch = CountDownLatch(1)
         val allowed = AtomicBoolean(false)
-        val posted = Handler(Looper.getMainLooper()).post {
-            val current = activity()
-            if (current == null || current.isFinishing || current.isDestroyed) {
+        val posted = post {
+            val ctx = host ?: target
+            if (ctx.isFinishing || ctx.isDestroyed) {
                 latch.countDown()
                 return@post
             }
             runCatching {
-                AlertDialog.Builder(current)
+                val d = AlertDialog.Builder(ctx)
                     .setTitle(copy.title(request))
                     .setMessage(copy.message(request))
                     .setPositiveButton(copy.allowLabel) { _, _ -> allowed.set(true); latch.countDown() }
                     .setNegativeButton(copy.denyLabel) { _, _ -> latch.countDown() }
+                    .setOnCancelListener { latch.countDown() }
                     .setCancelable(false)
                     .create()
-                    .show()
+                dialog = d
+                d.show()
             }.onFailure { latch.countDown() }
         }
-        if (!posted) {
-            // 主线程已经在退出，post 不进去，别白等。
-            return false
-        }
+        if (!posted) return false
 
         val timeout = request.timeoutMillis.coerceAtLeast(MIN_TIMEOUT_MS)
         val answered = runCatching { latch.await(timeout, TimeUnit.MILLISECONDS) }.getOrDefault(false)
+        if (!answered) dismissPending()
         return answered && allowed.get()
     }
+
+    private fun dismissPending() {
+        val pending = dialog ?: return
+        dialog = null
+        post { runCatching { pending.dismiss() } }
+    }
+
+    private fun post(block: () -> Unit): Boolean = Handler(Looper.getMainLooper()).post(block)
 
     companion object {
         /** 最低等待 1 秒：再短用户来不及看清弹窗，等于随机拒绝。 */
@@ -100,6 +129,7 @@ interface Prompts {
 /** Application 里一行接上：GuardConfig.confirmationHandler = GuardUi.dialogHandler(activityProvider)。 */
 object GuardUi {
     @JvmStatic
+    @JvmOverloads
     fun dialogHandler(activity: () -> Activity?, prompts: Prompts = Prompts.Default): ConfirmationHandler =
         DialogConfirmationHandler(activity, prompts)
 }

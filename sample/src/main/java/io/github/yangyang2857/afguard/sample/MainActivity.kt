@@ -15,6 +15,7 @@ import io.github.yangyang2857.afguard.GuardResult
 import io.github.yangyang2857.afguard.GuardedCall
 import io.github.yangyang2857.afguard.internal.AuditRecord
 import io.github.yangyang2857.afguard.internal.RingBufferAuditSink
+import io.github.yangyang2857.afguard.ui.DialogConfirmationHandler
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

@@ -85,6 +85,34 @@ fun deleteNote(@TextLimit(max = 64) id: String): Boolean = repo.delete(id)
 
 ---
 
+## 模块
+
+| 模块 | 类型 | 内容 |
+|---|---|---|
+| `guard-audit` | 纯 JVM | `AuditRecord`、`DecisionKind`、`AuditSink` + CSV / JSONL 导出。不依赖 Android，能在 CI 和纯 JVM 工具里跑 |
+| `guard-core` | Android AAR | 拦截链、策略引擎、限流器、脱敏器、审计出口 |
+| `guard-ksp` | KSP 处理器 | 编译期生成参数校验器与函数元数据表 |
+| `guard-ui` | Android AAR | `DialogConfirmationHandler`：跟随生命周期、超时安全、主线程调用直接拒绝而不是死锁 |
+| `guard-cli` | JVM 应用 | 从 JSONL 审计文件导出 / 汇总，给需要把日志拿出 App 的人 |
+
+前四个是发布坐标，`guard-cli` 是可运行程序，不作为库依赖。
+
+---
+
+## 离线看审计日志
+
+库只写"形状"：决策、函数名、调用方、参数指纹。导出来就是一份能交给审查者的文件：
+
+```bash
+gradle :guard-cli:installDist
+./guard-cli/build/install/guard-cli/bin/guard-cli summary --in audit.jsonl
+./guard-cli/build/install/guard-cli/bin/guard-cli export --in audit.jsonl --out audit.csv --format csv
+```
+
+解析不了的行会报出来，不会静默丢弃——被截断的审计日志比吵闹的日志危险得多。
+
+---
+
 ## 错误协议
 
 即使你最终不用这个库，这部分也值得抄走。
@@ -189,10 +217,10 @@ dependencies {
 
 - [x] 核心拦截链、策略引擎、限流器、脱敏器、审计、错误协议
 - [x] KSP 处理器（生成校验器 + 元数据表）
-- [ ] **真机端到端验证** —— 开发环境没有 Android SDK，还没对着真实 `AppFunctionService` 跑通过
-- [ ] `guard-ui` 确认弹窗
-- [ ] `guard-cli` 审计导出
-- [ ] Maven Central 发布
+- [x] `guard-ui` 确认弹窗（`DialogConfirmationHandler`），sample 自己就在用
+- [x] `guard-cli` 审计导出（CSV / JSONL + summary），CI 有冒烟
+- [x] Maven Central *元数据* —— POM / sources / javadoc 三件套都能产出，CI 校验 `gradle publishAllToLocal`；真正上传还需要 Sonatype 凭据与 GPG 密钥，见 [docs/PUBLISHING.md](docs/PUBLISHING.md)
+- [ ] **真机端到端验证** —— CI 没设备也没 Agent 宿主，拦截链还没对着真实 `AppFunctionService` 跑过。清单见 [docs/DEVICE_TEST.md](docs/DEVICE_TEST.md)
 
 早期阶段，最有价值的是对**注解设计**的反馈，不是 bug 报告。
 

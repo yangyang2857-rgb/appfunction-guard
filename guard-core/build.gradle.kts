@@ -1,7 +1,10 @@
+import org.gradle.api.publish.maven.MavenPublication
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
+    `maven-publish`
 }
 
 android {
@@ -20,6 +23,53 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    // 只发布 release AAR，并附带 sources，便于使用方在 IDE 里读到 KDoc
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
+}
+
+val javadocJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("javadoc")
+    from(rootProject.file("docs/JAVADOC.md"))
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                from(components["release"])
+                artifactId = "guard-core"
+                artifact(javadocJar)
+                pom {
+                    name.set("AppFunction Guard :: core")
+                    description.set("Intercept, gate and audit AppFunctions calls on Android 16 (Android API 36)")
+                    url.set("https://github.com/yangyang2857-rgb/appfunction-guard")
+                    licenses {
+                        license {
+                            name.set("MIT License")
+                            url.set("https://opensource.org/licenses/MIT")
+                        }
+                    }
+                    developers {
+                        developer {
+                            id.set("yangyang2857-rgb")
+                            name.set("Wang Sunyang")
+                            url.set("https://github.com/yangyang2857-rgb")
+                        }
+                    }
+                    scm {
+                        connection.set("scm:git:git://github.com/yangyang2857-rgb/appfunction-guard.git")
+                        developerConnection.set("scm:git:ssh://github.com/yangyang2857-rgb/appfunction-guard.git")
+                        url.set("https://github.com/yangyang2857-rgb/appfunction-guard")
+                    }
+                }
+            }
+        }
     }
 }
 

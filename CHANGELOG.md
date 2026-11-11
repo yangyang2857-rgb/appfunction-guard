@@ -2,6 +2,27 @@
 
 以 [Semantic Versioning](https://semver.org/) 管理。
 
+## [0.1.0-alpha3] - 2026-11-12
+
+把"只有核心库"补成"能发、能用、能验收"。CI 仍然只证明构建与单测，真机那一格依旧空着。
+
+### Added
+- `guard-audit`：审计模型（`AuditRecord` / `DecisionKind` / `AuditSink` / `RingBufferAuditSink`）与 CSV、JSONL 双向转换、summary 统计，不依赖 Android
+- `guard-ui`：`DialogConfirmationHandler` 参考实现，支持 `attach`/`detach` 跟随 Activity 生命周期；主线程调用直接判否，超时后返回拒绝并 dismiss 残留弹窗
+- `guard-cli`：`summary` / `export --format csv|jsonl`，支持文件或 stdin，解析失败的行计入报告而非静默跳过
+- 四个可发布模块的 Maven 发布配置：POM 元数据齐全、release AAR + sources + javadoc artifact、`publishAllToLocal` 一键装本地
+- `docs/DEVICE_TEST.md` 真机验收清单（11 项）、`docs/PUBLISHING.md` 发布流程、`docs/JAVADOC.md` javadoc 占位说明
+
+### Changed
+- `guard-core` 的审计类型改为 `typealias` 指向 `guard-audit`，避免同一模型两处定义
+- `sample` 改用 `guard-ui` 的确认弹窗，删掉自带的重复实现
+- CI 扩到四模块装配 + 三模块单测 + CLI 冒烟 + 发布元数据校验
+
+### Known limitations
+- 仍未在真机跑端到端验证，验收清单待填
+- `-javadoc.jar` 是说明占位，0.2.0 接 Dokka
+- Maven Central 上传未执行（缺 Sonatype 凭据与 GPG 密钥）
+
 ## [0.1.0-alpha2] - 2026-11-12
 
 第一次让 CI 真正跑通。alpha 版本是"能编译过"，这一版是"能构建、能出 APK、能测"。

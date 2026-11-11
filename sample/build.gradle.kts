@@ -33,6 +33,8 @@ android {
 
 dependencies {
     implementation(project(":guard-core"))
+    // 参考确认弹窗（含生命周期与超时处理），可直接用也可以照着写
+    implementation(project(":guard-ui"))
     // 编译期生成校验器与元数据，运行时零反射解析
     ksp(project(":guard-ksp"))
 }

@@ -4,6 +4,7 @@ import android.app.Application
 import io.github.yangyang2857.afguard.GuardConfig
 import io.github.yangyang2857.afguard.Policy
 import io.github.yangyang2857.afguard.internal.RingBufferAuditSink
+import io.github.yangyang2857.afguard.ui.DialogConfirmationHandler
 
 /**
  * 接入成本演示：一个 Application.onCreate 里全部配完，没有 DI、没有 Builder。

@@ -111,6 +111,38 @@ Setup notes, the real-device `AppFunctionService` wiring, and the two ways peopl
 
 ---
 
+## Modules
+
+| Module | Type | What's in it |
+|---|---|---|
+| `guard-audit` | pure JVM | `AuditRecord`, `DecisionKind`, `AuditSink` + CSV / JSONL export. No Android dependency, so it runs in CI and in plain JVM tools |
+| `guard-core` | Android AAR | interception chain, policy engine, rate limiter, redactor, audit wiring |
+| `guard-ksp` | KSP processor | generates argument validators and the function metadata table at build time |
+| `guard-ui` | Android AAR | `DialogConfirmationHandler` — lifecycle aware, timeout safe, refuses instead of deadlocking on the main thread |
+| `guard-cli` | JVM app | audit export / summary from a JSONL dump, for people who want the log out of the app |
+
+`guard-audit` / `guard-core` / `guard-ksp` / `guard-ui` are published coordinates; `guard-cli` is a runnable app, not a library dependency.
+
+---
+
+## Read the audit log offline
+
+The library only writes *shapes* — decision, function, caller, argument fingerprint. Export it and you get a file you can hand to a reviewer:
+
+```bash
+# one line per call, from RingBufferAuditSink.toJsonLines()
+gradle :guard-cli:installDist
+./guard-cli/build/install/guard-cli/bin/guard-cli summary --in audit.jsonl
+
+# to CSV, for a spreadsheet
+./guard-cli/build/install/guard-cli/bin/guard-cli export --in audit.jsonl --out audit.csv --format csv
+
+# or pipe it
+cat audit.jsonl | ./guard-cli/build/install/guard-cli/bin/guard-cli summary
+```
+
+Unparseable lines are reported, not silently dropped: a truncated audit log is worse than a loud one.
+
 ---
 
 ## Error protocol
@@ -225,12 +257,12 @@ Honest state of things:
 - [x] KSP processor generating validators + metadata
 - [x] CI on GitHub Actions — green build, unit tests, sample APK artifact
 - [x] `sample/` — runnable demo app covering all four policies, rate limiting, redaction, audit viewer
-- [ ] **End-to-end verification on a real device** — built in an environment without an Android SDK, so it has not yet run against a live `AppFunctionService`
-- [ ] `guard-ui` — drop-in confirmation dialog
-- [ ] `guard-cli` — export audit records to CSV/JSON
-- [ ] Maven Central release
+- [x] `guard-ui` — drop-in confirmation dialog (`DialogConfirmationHandler`), used by `sample` itself
+- [x] `guard-cli` — audit export to CSV / JSONL + summary, smoke tested in CI
+- [x] Maven Central *metadata* — POM / sources / javadoc artifacts all build; `gradle publishAllToLocal` is verified in CI. Actual upload needs my Sonatype credentials + GPG key: [docs/PUBLISHING.md](docs/PUBLISHING.md)
+- [ ] **End-to-end verification on a real device** — CI has no device and no Agent host, so the interception chain has never run against a live `AppFunctionService`. Checklist: [docs/DEVICE_TEST.md](docs/DEVICE_TEST.md)
 
-CI: [`build.yml`](.github/workflows/build.yml) runs on every push to `main` — assembles all three modules, runs unit tests, and uploads `sample-debug-apk`. Details: [docs/CI.md](docs/CI.md)
+CI: [`build.yml`](.github/workflows/build.yml) runs on every push to `main` — assembles all four library modules plus `sample` / `guard-cli`, runs unit tests, smoke tests the CLI, verifies publication metadata. Details: [docs/CI.md](docs/CI.md)
 
 If you're here early: the interesting part is the *policy surface*, not the code volume. Feedback on the annotation design is more useful than bug reports right now.
 
@@ -248,12 +280,12 @@ Background reading on the risk model: the AppFunctions security analysis coverin
 
 ## Roadmap
 
-| Week | Goal |
-|---|---|
-| 1 | Run it end-to-end on a device, write up what actually broke |
-| 2 | `guard-ui` confirmation sheet + audit viewer |
-| 3 | `guard-cli` export, policy lint (`afg check`) |
-| 4 | Maven Central, v0.1.0 |
+| Week | Goal | State |
+|---|---|---|
+| 1 | Run it end-to-end on a device, write up what actually broke | open — checklist ready in [docs/DEVICE_TEST.md](docs/DEVICE_TEST.md) |
+| 2 | `guard-ui` confirmation sheet + audit viewer | dialog done; audit viewer still lives in `sample` |
+| 3 | `guard-cli` export, policy lint (`afg check`) | export done; `afg check` not started |
+| 4 | Maven Central, v0.1.0 | metadata ready, upload pending credentials |
 
 ---
 
