@@ -46,9 +46,13 @@ val signingPasswordValue = (findProperty("signingPassword") as String?)
 
 subprojects {
     plugins.withId("maven-publish") {
+        // 注意：Gradle.projectsEvaluated 的 lambda 接收者是 Gradle（它本身是 ExtensionAware），
+        // 直接写 extensions 会解析到 Gradle 实例上（那里只有 ExtraProperties），必须显式持有 Project。
+        val proj = this
+
         apply(plugin = "signing")
 
-        extensions.configure<PublishingExtension> {
+        proj.extensions.configure<PublishingExtension> {
             repositories {
                 maven {
                     name = "centralStaging"
@@ -61,10 +65,11 @@ subprojects {
             // guard-core / guard-ui 的 publication 是在 afterEvaluate 里建的，这里必须等
             // 全部项目脚本求值完再签名，否则会签到一个空集合上。
             gradle.projectsEvaluated {
-                extensions.configure<SigningExtension> {
+                proj.extensions.configure<SigningExtension> {
                     useInMemoryPgpKeys(signingKeyValue, signingPasswordValue)
                     // 这个时刻所有 publication 都已创建，逐个签即可（sign 只接受 vararg）。
-                    the<PublishingExtension>().publications.forEach { sign(it) }
+                    proj.extensions.getByType(PublishingExtension::class.java)
+                        .publications.forEach { sign(it) }
                 }
             }
         }
