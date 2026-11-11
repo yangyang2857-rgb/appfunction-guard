@@ -44,7 +44,9 @@ val signingKeyValue = (findProperty("signingKey") as String?)?.takeIf { it.isNot
 val signingPasswordValue = (findProperty("signingPassword") as String?)
     ?: System.getenv("SIGNING_PASSWORD")
 
-subprojects { sub ->
+subprojects {
+    val sub: Project = this
+
     sub.plugins.withId("maven-publish") {
         apply(plugin = "signing")
 
