@@ -9,8 +9,10 @@
 #   2. 命令行：mkdir -p .github/workflows && cp ci/build.yml .github/workflows/build.yml && git push
 #
 # 注意：放进 .github/workflows 之后，这个文件会被 GitHub Actions 真正执行。
+# 仓库里没有 gradle wrapper（生成它需要一次本地 Gradle），所以这里用 setup-gradle 拉发行版直接跑 gradle。
 
-name: build.yml
+name: build
+
 on:
   push:
     branches: [ main ]
@@ -31,9 +33,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
 
       - name: Assemble
-        run: ./gradlew assembleDebug --stacktrace
+        run: gradle assembleDebug --stacktrace
 
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+        run: gradle testDebugUnitTest --stacktrace
