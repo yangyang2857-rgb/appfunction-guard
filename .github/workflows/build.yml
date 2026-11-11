@@ -1,5 +1,11 @@
 # Android library build: guard-core + guard-ksp + sample
-# Requires AGP 8.13 / Gradle 8.13 / compileSdk 36
+#
+# 说明：不用 android-actions/setup-android@v3。
+# 该 action 内部会执行 `sdkmanager tools`，而 `tools` 包在 2024 年后已从 Google 仓库移除，
+# 结果是 "Warning: Failed to find package 'tools'" 并 exit code 1。
+# GitHub 的 ubuntu-latest runner 本身预装了 Android SDK（/usr/local/lib/android/sdk），
+# 所以这里直接用它自带的 sdkmanager 装需要的组件，少一层包装少一个坑。
+
 name: build
 
 on:
@@ -15,7 +21,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -25,16 +31,35 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
 
-      - name: Accept SDK licenses
-        run: yes | sdkmanager --licenses > /dev/null || true
+      - name: Install Android SDK packages
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          echo "SDK=$SDK"
+          ls "$SDK" || true
+          SDKMGR=$(ls -d "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)
+          echo "sdkmanager=$SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+
+          echo "--- installed before ---"
+          "$SDKMGR" --list_installed 2>/dev/null | head -30 || true
+
+          "$SDKMGR" --install "platforms;android-36" "platform-tools" 2>&1 | tail -3 || true
+
+          for BT in 36.0.0 36.0.1 36.1.0 35.0.0; do
+            if "$SDKMGR" --install "build-tools;$BT" > /tmp/bt.log 2>&1; then
+              echo "build-tools $BT installed"
+              break
+            fi
+          done
+          tail -3 /tmp/bt.log || true
+
+          echo "--- installed after ---"
+          ls "$SDK/platforms" "$SDK/build-tools" || true
 
       - name: Assemble
         run: gradle assembleDebug --stacktrace --no-daemon
