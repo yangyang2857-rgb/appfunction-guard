@@ -6,10 +6,15 @@
 
 | 步骤 | 说明 |
 |------|------|
-| Assemble | 装配 `guard-core`（AAR）、`guard-ksp`（JAR）、`sample`（APK） |
-| Unit tests | 跑 `guard-core` 与 `guard-ksp` 的单元测试 |
+| Assemble | 装配 `guard-core` / `guard-ui`（AAR）、`guard-ksp`（JAR）、`guard-cli`（可执行分发）、`sample`（APK） |
+| Unit tests | 跑 `guard-core` / `guard-ksp` / `guard-audit` / `guard-cli` 的单元测试 |
+| CLI smoke test | 真跑 `guard-cli`：summary 计数、CSV 导出、stdin 与 JSONL round-trip |
+| CLI usage exit code | 无参数时退出码必须是 2 |
+| Publication metadata | `gradle publishAllToLocal`，校验四个发布模块的 POM / sources / javadoc 三件套与 POM 里的 license、scm |
 | Dump generated KSP sources | 仅失败时执行，把生成的校验器源码打印到日志 |
-| Upload sample APK | 上传 `sample-debug-apk` 产物 |
+| Upload sample APK / CLI | 上传 `sample-debug-apk` 与 `guard-cli` 分发产物（`continue-on-error`，产物上传失败不判构建失败） |
+
+**CI 覆盖不到的部分**：真机上的 `AppFunctionService` 行为、Agent 宿主实际调用、确认弹窗在真机的时序。这些靠 [DEVICE_TEST.md](DEVICE_TEST.md) 的清单人工验收。
 
 ## 看结果
 
@@ -25,7 +30,9 @@ GitHub 对 `.github/workflows/*` 有额外校验：token 只有 `repo` scope 时
 ## 本地复现
 
 ```bash
-./gradlew :guard-core:assembleDebug :guard-ksp:test :sample:assembleDebug
+gradle assembleDebug :guard-audit:assemble :guard-ui:assembleDebug :guard-cli:installDist
+gradle testDebugUnitTest :guard-audit:test :guard-cli:test
+gradle publishAllToLocal   # 校验发布元数据，不需要密钥
 ```
 
-需要 JDK 17 与 Android SDK Platform 36。
+需要 JDK 17 与 Android SDK Platform 36。仓库里没有 Gradle Wrapper，用本机 Gradle 8.13；想固定版本可以自己跑一次 `gradle wrapper`。
