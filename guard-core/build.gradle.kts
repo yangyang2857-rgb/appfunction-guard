@@ -24,6 +24,8 @@ android {
 }
 
 dependencies {
+    // 审计模型是纯 JVM 的，用 api 暴露出去：sample / guard-ui 都要能拿到 AuditRecord
+    api(project(":guard-audit"))
     implementation(libs.androidx.core)
     compileOnly(libs.androidx.annotation)
 

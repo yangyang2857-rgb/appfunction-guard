@@ -74,10 +74,51 @@ jobs:
           gradle help --no-daemon --info 2>&1 | grep -iE "ksp|repository|resolv|https?://" | head -40 || true
 
       - name: Assemble
-        run: gradle assembleDebug --stacktrace --no-daemon
+        run: |
+          gradle assembleDebug \
+            :guard-audit:assemble \
+            :guard-ui:assembleDebug \
+            :guard-cli:installDist \
+            --stacktrace --no-daemon
 
       - name: Unit tests
-        run: gradle testDebugUnitTest --stacktrace --no-daemon
+        run: |
+          gradle testDebugUnitTest :guard-audit:test :guard-cli:test --stacktrace --no-daemon
+
+      # CLI 是"离线分析审计"的最后一环，构建通过不代表能用，所以真跑一遍。
+      - name: CLI smoke test
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/afg
+          printf '%s\n' \
+            '{"timestampMillis":1700000000000,"functionId":"listNotes","callerPackage":"com.example.agent","callerUid":10123,"decision":"ALLOWED","durationMillis":3,"argsDigest":"a1b2c3d4e5f60718","piiRedacted":0,"errorCode":null,"degraded":false}' \
+            '{"timestampMillis":1700000001000,"functionId":"wipeAllNotes","callerPackage":"com.evil.agent","callerUid":10999,"decision":"DENIED_POLICY","durationMillis":1,"argsDigest":null,"piiRedacted":0,"errorCode":"afg_policy_denied","degraded":false}' \
+            > /tmp/afg/audit.jsonl
+
+          BIN=guard-cli/build/install/guard-cli/bin/guard-cli
+
+          echo "--- summary ---"
+          "$BIN" summary --in /tmp/afg/audit.jsonl | tee /tmp/afg/summary.txt
+          grep -q "记录条数: 2" /tmp/afg/summary.txt
+          grep -q "被拦截: 1" /tmp/afg/summary.txt
+
+          echo "--- export csv ---"
+          "$BIN" export --in /tmp/afg/audit.jsonl --out /tmp/afg/audit.csv --format csv
+          cat /tmp/afg/audit.csv
+          grep -q "wipeAllNotes" /tmp/afg/audit.csv
+
+          echo "--- stdin + json round trip ---"
+          cat /tmp/afg/audit.jsonl | "$BIN" summary --in - | grep -q "记录条数: 2"
+          "$BIN" export --in /tmp/afg/audit.jsonl --out /tmp/afg/round.jsonl --format json
+          "$BIN" summary --in /tmp/afg/round.jsonl | grep -q "记录条数: 2"
+
+      - name: CLI usage exit code
+        run: |
+          set +e
+          guard-cli/build/install/guard-cli/bin/guard-cli > /tmp/afg/usage.txt 2>&1
+          CODE=$?
+          cat /tmp/afg/usage.txt
+          test "$CODE" -eq 2
 
       - name: Dump generated KSP sources
         if: failure()
@@ -91,5 +132,14 @@ jobs:
         with:
           name: sample-debug-apk
           path: sample/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload CLI distribution
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guard-cli
+          path: guard-cli/build/install/guard-cli/
           if-no-files-found: warn
           retention-days: 7

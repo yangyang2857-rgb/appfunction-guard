@@ -2,11 +2,9 @@ import org.gradle.api.initialization.resolve.RepositoriesMode
 
 pluginManagement {
     repositories {
-        gradlePluginPortal()
-        mavenCentral()
-        maven("https://repo.maven.apache.org/maven2")
-        maven("https://plugins.gradle.org/m2")
         google()
+        mavenCentral()
+        gradlePluginPortal()
     }
 }
 
@@ -15,7 +13,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven("https://repo.maven.apache.org/maven2")
     }
 }
 
@@ -23,4 +20,7 @@ rootProject.name = "appfunction-guard"
 
 include(":guard-core")
 include(":guard-ksp")
+include(":guard-audit")
+include(":guard-ui")
+include(":guard-cli")
 include(":sample")
