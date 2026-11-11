@@ -9,7 +9,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import io.github.yangyang2857.afguard.Guard
+import io.github.yangyang2857.afguard.AfGuard
 import io.github.yangyang2857.afguard.GuardConfig
 import io.github.yangyang2857.afguard.GuardResult
 import io.github.yangyang2857.afguard.GuardedCall
@@ -23,7 +23,7 @@ import java.util.concurrent.Executors
 /**
  * 演示界面。
  *
- * 每个按钮都等价于一次 Agent 发起的调用：走 [Guard.intercept]，而不是直接调业务函数。
+ * 每个按钮都等价于一次 Agent 发起的调用：走 [AfGuard.intercept]，而不是直接调业务函数。
  * 差别就在这里 —— 业务函数一行都不用改，拦截发生在调用边界上。
  */
 class MainActivity : Activity() {
@@ -188,7 +188,7 @@ class MainActivity : Activity() {
         executor.execute {
             repeat(9) { index ->
                 val args = Bundle().apply { putString("id", "n_00${index % 3 + 1}") }
-                val result = Guard.intercept("deleteNote", args) { call ->
+                val result = AfGuard.intercept("deleteNote", args) { call ->
                     NoteFunctions.deleteNote(call.requireString("id"))
                 }
                 val line = when (result) {
@@ -209,7 +209,7 @@ class MainActivity : Activity() {
         append("→ $functionId  ${describe(args)}")
         executor.execute {
             val startedAt = System.currentTimeMillis()
-            val result = Guard.intercept(functionId, args, block)
+            val result = AfGuard.intercept(functionId, args, block)
             val cost = System.currentTimeMillis() - startedAt
             val text = when (result) {
                 is GuardResult.Ok -> buildString {

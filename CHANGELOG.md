@@ -11,7 +11,7 @@
 - `@RateLimit` 令牌桶限流，按函数 × 调用方分桶，支持突发
 - `@TextLimit` / `@IntRange` / `@Pattern` / `@OneOfVal` 参数约束注解
 - `@Sensitive` 敏感参数标记与 `PiiKind` 枚举
-- `Guard.intercept()` 拦截链：白名单 → 策略 → 限流 → 校验 → 确认 → 执行 → 脱敏 → 审计
+- `AfGuard.intercept()` 拦截链：白名单 → 策略 → 限流 → 校验 → 确认 → 执行 → 脱敏 → 审计
 - `GuardError` 结构化错误协议（`afg_error` JSON），每个错误码带 `retryable` 与 `hint`
 - `Redactor` 内置 PII 检测（手机号 / 邮箱 / 身份证 / 银行卡 / 经纬度）
 - `RingBufferAuditSink` 内存环形审计（默认保留 5000 条）

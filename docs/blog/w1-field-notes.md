@@ -18,7 +18,7 @@ Android 16 的 AppFunctions 让 AI Agent 可以直接调用 App 里的函数，�
 这五个问题不是缺 API，是缺一层策略。所以我写了 [AppFunction Guard](https://github.com/yangyang2857-rgb/appfunction-guard)：一个放在平台调用与业务代码之间的拦截链。
 
 ```
-业务代码 → Guard.intercept(functionId, args) { ... }
+业务代码 → AfGuard.intercept(functionId, args) { ... }
               ├─ 1. 调用方白名单
               ├─ 2. 策略判定（ALWAYS_DENY / CONFIRM_EACH / CONFIRM_ONCE / ALLOW）
               ├─ 3. 限流（令牌桶，按调用方）
@@ -58,7 +58,7 @@ public object AfGuardGeneratedValidators : FunctionValidator { ... }
 
 后果不是崩溃，是**更糟的东西**：
 
-- `Guard.intercept()` 照常工作，不报错；
+- `AfGuard.intercept()` 照常工作，不报错；
 - 策略、限流、脱敏全部按默认策略走；
 - 你标了 `ALWAYS_DENY` 的函数，实际行为变成了"问用户一次"；
 - 参数校验整个不生效。
@@ -175,7 +175,7 @@ fun interface ConfirmationHandler {
 val granted = handler.confirm(request)
 ```
 
-主线程等 latch，弹窗要主线程才能显示——死锁。Agent 的调用线程大概率是 Binder 线程，不会死锁，但只要你哪天在主线程里手动调一次 `Guard.intercept()`（做测试很容易这样），就会卡死，而且卡得没有任何日志。
+主线程等 latch，弹窗要主线程才能显示——死锁。Agent 的调用线程大概率是 Binder 线程，不会死锁，但只要你哪天在主线程里手动调一次 `AfGuard.intercept()`（做测试很容易这样），就会卡死，而且卡得没有任何日志。
 
 正确写法只有一个：**调用方在后台线程，确认回调里把 UI 操作 post 到主线程，用 latch 把两边接起来**。
 

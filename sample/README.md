@@ -10,7 +10,7 @@
 gradle :sample:installDebug   # 仓库未带 wrapper，需本机 Gradle 8.13；或先执行 gradle wrapper 生成
 ```
 
-打开 **AFG Sample**，界面上每个按钮都等价于一次 Agent 发起的调用 —— 走的是 `Guard.intercept()`，不是直接调业务函数。
+打开 **AFG Sample**，界面上每个按钮都等价于一次 Agent 发起的调用 —— 走的是 `AfGuard.intercept()`，不是直接调业务函数。
 
 | 按钮 | 预期现象 |
 |------|----------|
@@ -55,7 +55,7 @@ class NoteAppFunctionService : AppFunctionService() {
         // 平台参数随 alpha 版本变动，以官方文档为准
         cancellationSignal: CancellationSignal
     ): Bundle {
-        val result = Guard.intercept(functionId, args) { call ->
+        val result = AfGuard.intercept(functionId, args) { call ->
             when (call.functionId) {
                 "listNotes"   -> NoteFunctions.listNotes(call.intOr("limit", 20))
                 "searchNotes" -> NoteFunctions.searchNotes(call.requireString("keyword"))

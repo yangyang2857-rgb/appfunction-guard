@@ -69,7 +69,7 @@ GuardConfig.confirmationHandler = MyConfirmDialog()   // your UI, 3 lines
 // 2. In your AppFunctionService
 override fun onExecuteFunction(functionId: String, args: Bundle): Bundle =
     BundleCodec.toBundle(
-        Guard.intercept(functionId, args) { call ->
+        AfGuard.intercept(functionId, args) { call ->
             when (call.functionId) {
                 "listNotes"  -> repo.recent(call.intOr("limit", 20))
                 "deleteNote" -> repo.delete(call.requireString("id"))
@@ -91,7 +91,7 @@ That's it. The annotations are read by KSP at build time; there is no reflection
 
 ## See it work
 
-`sample/` is a runnable app. Every button in it is one agent call going through `Guard.intercept()`:
+`sample/` is a runnable app. Every button in it is one agent call going through `AfGuard.intercept()`:
 
 ```bash
 gradle :sample:installDebug   # no wrapper in the repo; use local Gradle 8.13, or run `gradle wrapper` first

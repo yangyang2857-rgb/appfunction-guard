@@ -65,7 +65,7 @@ GuardConfig.confirmationHandler = MyConfirmDialog()   // 宿主自己实现，�
 // 2. 你的 AppFunctionService
 override fun onExecuteFunction(functionId: String, args: Bundle): Bundle =
     BundleCodec.toBundle(
-        Guard.intercept(functionId, args) { call ->
+        AfGuard.intercept(functionId, args) { call ->
             when (call.functionId) {
                 "listNotes"  -> repo.recent(call.intOr("limit", 20))
                 "deleteNote" -> repo.delete(call.requireString("id"))

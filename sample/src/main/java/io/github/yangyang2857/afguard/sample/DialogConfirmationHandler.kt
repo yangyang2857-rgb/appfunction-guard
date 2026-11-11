@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * 关键点：`confirm()` 是阻塞调用，通常发生在后台线程（Agent 的调用线程）；
  * 弹窗必须在主线程。所以这里用 CountDownLatch 把两边接起来。
- * 直接在主线程调 Guard.intercept() 并同步等待弹窗结果会死锁 —— 这是最常见的接错方式。
+ * 直接在主线程调 AfGuard.intercept() 并同步等待弹窗结果会死锁 —— 这是最常见的接错方式。
  */
 class DialogConfirmationHandler : ConfirmationHandler {
 

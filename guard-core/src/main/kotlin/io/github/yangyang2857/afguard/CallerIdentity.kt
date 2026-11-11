@@ -44,12 +44,14 @@ class CallerAllowList(
         STRICT
     }
 
-    fun isAllowed(caller: CallerIdentity): Boolean = when (mode) {
-        Mode.DISABLED -> true
-        Mode.STRICT -> {
-            if (caller.isPrivileged) return true
-            caller.packageName in packages ||
-                (caller.signatureHash != null && caller.signatureHash in signatureHashes)
+    fun isAllowed(caller: CallerIdentity): Boolean {
+        return when (mode) {
+            Mode.DISABLED -> true
+            Mode.STRICT -> {
+                if (caller.isPrivileged) return true
+                caller.packageName in packages ||
+                    (caller.signatureHash != null && caller.signatureHash in signatureHashes)
+            }
         }
     }
 

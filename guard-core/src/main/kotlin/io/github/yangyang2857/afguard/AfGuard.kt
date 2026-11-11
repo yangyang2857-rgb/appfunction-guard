@@ -15,6 +15,9 @@ import java.security.MessageDigest
 /**
  * 拦截器入口。
  *
+ * 命名说明：注解 [Guard] 占用了 `Guard` 这个名字，所以本对象叫 `AfGuard`，
+ * 调用写作 `AfGuard.intercept(functionId, args) { ... }`。
+ *
  * 刻意不继承任何平台类、不 import `android.app.appfunctions.*`。
  * 原因：那套 API 还在 alpha，删过组件。把它挡在业务侧，库本身就不会随平台抖动。
  * 平台怎么变，只改你自己 Service 里那一行调用。
@@ -22,7 +25,7 @@ import java.security.MessageDigest
  * 典型用法：
  * ```kotlin
  * override fun onExecuteFunction(functionId: String, args: Bundle, ...): Bundle {
- *     val result = Guard.intercept(functionId, args) { call ->
+ *     val result = AfGuard.intercept(functionId, args) { call ->
  *         when (call.functionId) {
  *             "listNotes" -> repo.recent(call.intOr("limit", 20))
  *             "deleteNote" -> repo.delete(call.requireString("id"))
@@ -33,7 +36,7 @@ import java.security.MessageDigest
  * }
  * ```
  */
-object Guard {
+object AfGuard {
 
     private val rateLimiter = RateLimiter { GuardConfig.clock() }
 
