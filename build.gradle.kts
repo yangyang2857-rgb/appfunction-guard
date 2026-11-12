@@ -6,7 +6,8 @@ import org.gradle.plugins.signing.SigningExtension
 // 版本说明：
 // - AGP / Kotlin / KSP 的版本号请在 Android Studio 里用 "AGP Upgrade Assistant" 校准一次，
 //   或直接改 gradle/libs.versions.toml。这组数字是 2026-11 的合理值，但你的 IDE 可能已有更新版本。
-// - compileSdk 必须是 36（Android 16），AppFunctions 是 Android 16+ 的平台能力。
+// - compileSdk 是 37：androidx.appfunctions 1.0.0-rc01 起要求 compileSdk 37 + AGP 9.1+，
+//   而 AGP 9 又要求 Gradle 9.1+，三者必须一起动。AppFunctions 本身仍然是 Android 16+ 的平台能力。
 //
 // 发布：四个可发布模块（guard-audit / guard-core / guard-ksp / guard-ui）统一用
 // group:io.github.yangyang2857-rgb，版本从这里下发给所有子项目，避免各写各的。

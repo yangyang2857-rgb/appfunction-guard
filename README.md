@@ -112,7 +112,7 @@ That's it. The annotations are read by KSP at build time; there is no reflection
 `sample/` is a runnable app. Every button in it is one agent call going through `AfGuard.intercept()`:
 
 ```bash
-gradle :sample:installDebug   # no wrapper in the repo; use local Gradle 8.13, or run `gradle wrapper` first
+gradle :sample:installDebug   # no wrapper in the repo; use local Gradle 9.3.1, or run `gradle wrapper` first
 ```
 
 | Button | What you should see |
@@ -249,7 +249,7 @@ What actually broke during week 1, written down while it still hurt: [给 Androi
 
 ## Requirements
 
-- `compileSdk 36` (AGP 8.13+)
+- `compileSdk 37` (AGP 9.1+, Gradle 9.3.1+)
 - `minSdk 26` — the library itself is just `Bundle` + `Binder`, it runs anywhere; **AppFunctions itself requires a device on API 36**
 - Kotlin 2.x
 - KSP for annotation processing
