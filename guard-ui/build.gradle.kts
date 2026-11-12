@@ -24,6 +24,13 @@ android {
         jvmTarget = "17"
     }
 
+    testOptions {
+        unitTests {
+            // Robolectric 起 Activity 要能读主题与资源
+            isIncludeAndroidResources = true
+        }
+    }
+
     publishing {
         singleVariant("release") {
             withSourcesJar()
@@ -73,4 +80,7 @@ afterEvaluate {
 
 dependencies {
     api(project(":guard-core"))
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
 }
