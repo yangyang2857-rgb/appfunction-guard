@@ -16,6 +16,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            阶段 B：KSP 生成的 Service（serviceName = "NoteAppFunctionService"）。
+            权限与 action 是系统发现 App Function 的唯一通道，写错就等于没接。
+            注意：CINNAMON_BUN 之前一个 App 只允许一个 AppFunctionService 入口。
+        -->
+        <service
+            android:name=".NoteAppFunctionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_APP_FUNCTION_SERVICE">
+            <intent-filter>
+                <action android:name="android.app.appfunctions.AppFunctionService" />
+            </intent-filter>
+            <property
+                android:name="android.app.appfunctions"
+                android:resource="@xml/note_app_function_service" />
+        </service>
     </application>
 
 </manifest>

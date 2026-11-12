@@ -77,6 +77,17 @@ class NoteAppFunctionService : AppFunctionService() {
 1. **不要在 UI 线程同步等弹窗。** `ConfirmationHandler.confirm()` 是阻塞调用，而 `AlertDialog` 必须在主线程创建。sample 不再自带实现，直接用 `guard-ui` 的 `io.github.yangyang2857.afguard.ui.DialogConfirmationHandler`：调用方在后台线程，`confirm()` 里用 `CountDownLatch` + `runOnUiThread` 把两边界接起来；在 `Activity.onCreate` 里 `attach(this)`、`onDestroy` 里 `detach(this)` 跟随宿主生命周期，超时会 dismiss 残留弹窗并返回拒绝，在主线程调用 `confirm()` 直接判否而不是死锁。自己实现时这四条缺一不可。
 2. **`GuardConfig.init()` 之后再改 `auditSink`，要补一次 `GuardConfig.apply()`。** 审计出口是在 `init` 时挂上的，换出口不重新挂就会静默丢记录。
 
+## 阶段 B：平台接线
+
+`BaseNoteAppFunctionService.kt` 把这四个函数真正注册成系统可见的 App Function：
+
+- `@AppFunctionServiceEntryPoint(serviceName = "NoteAppFunctionService", appFunctionXmlFileName = "note_app_function_service")` 标在**抽象类**上，KSP 生成具体 Service 与 `res/xml/note_app_function_service.xml`；业务侧不写 `onExecuteFunction` 的 `when` 分发。
+- manifest 里那条 `<service>` 是系统发现的唯一通道：`BIND_APP_FUNCTION_SERVICE` 权限、`android.app.appfunctions.AppFunctionService` action、`<property android:name="android.app.appfunctions" android:resource="@xml/note_app_function_service" />`，三者缺一就索引不到。
+- 每个函数都是 `suspend` + `withContext(Dispatchers.IO)`：函数默认跑在 UI 线程，而 guard 的确认链路是阻塞等用户点击。不切线程就是"UI 线程等 latch、弹窗等 UI 线程"的死锁。
+- 返回值统一经 `AfGuard.intercept`；被拦截时返回 `AFGUARD_BLOCKED {json}`，Agent 能看到拒绝原因而不是一个不透明异常。
+
+CI 只证明"能编译、能装配"。真机上函数有没有被系统索引、执行时弹窗是否出现，仍要走 `docs/DEVICE_TEST.md` 的 B1–B5。
+
 ## 已知限制
 
 - `functionId` 取的是函数**简单名**。同一个 App 里两个类各有 `deleteNote` 会互相覆盖，务必保证全局唯一。

@@ -37,4 +37,10 @@ dependencies {
     implementation(project(":guard-ui"))
     // 编译期生成校验器与元数据，运行时零反射解析
     ksp(project(":guard-ksp"))
+
+    // 阶段 B：真正把函数暴露给系统 Agent。declare 用 KSP 生成 Service 与 schema。
+    implementation(libs.androidx.appfunctions)
+    ksp(libs.androidx.appfunctions.compiler)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.core)
 }
