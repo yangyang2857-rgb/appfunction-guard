@@ -86,6 +86,20 @@ jobs:
           gradle testDebugUnitTest :guard-core:testDebugUnitTest :guard-audit:test :guard-cli:test \
             --stacktrace --no-daemon
 
+      # 把跑了多少条、挂了几条打出来。"测试通过"这四个字得有人数兜底。
+      - name: Test counts
+        if: always()
+        run: |
+          python3 -c "
+          import glob, xml.etree.ElementTree as ET
+          t = f = 0
+          for p in glob.glob('*/build/test-results/**/TEST-*.xml', recursive=True):
+              r = ET.parse(p).getroot()
+              t += int(r.get('tests', 0))
+              f += int(r.get('failures', 0)) + int(r.get('errors', 0))
+          print(f'tests={t} failures={f}')
+          "
+
       # 拦截链的行为断言跑在 Robolectric 上，失败时报告比 logcat 好读得多。
       - name: Upload unit test reports
         if: failure()
