@@ -78,10 +78,13 @@ if [ "$VERIFY_ONLY" -eq 0 ]; then
   if [ -z "${SIGNING_KEY:-}" ]; then
     echo "WARNING: SIGNING_KEY is empty — the bundle will lack .asc files and Central will reject it."
   fi
+  # 关键：必须把密钥从子进程环境里摘掉。根 build.gradle.kts 会从 env SIGNING_KEY
+  # 推断需要签名，而 Gradle 内置 BouncyCastle 读不了 gpg 导出的私钥
+  # （"secret key ring doesn't start with secret key tag"）。签名统一放到 2.5 步做。
   if command -v gradle >/dev/null 2>&1; then
-    gradle "${GRADLE_ARGS[@]}"
+    env -u SIGNING_KEY -u SIGNING_PASSWORD gradle "${GRADLE_ARGS[@]}"
   else
-    ./gradlew "${GRADLE_ARGS[@]}"
+    env -u SIGNING_KEY -u SIGNING_PASSWORD ./gradlew "${GRADLE_ARGS[@]}"
   fi
 fi
 
