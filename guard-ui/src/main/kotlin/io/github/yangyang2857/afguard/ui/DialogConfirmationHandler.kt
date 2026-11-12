@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import io.github.yangyang2857.afguard.ConfirmRequest
 import io.github.yangyang2857.afguard.ConfirmationHandler
 import java.util.concurrent.CountDownLatch
@@ -74,7 +75,12 @@ class DialogConfirmationHandler @JvmOverloads constructor(
                     .create()
                 dialog = d
                 d.show()
-            }.onFailure { latch.countDown() }
+            }.onFailure {
+                // 弹窗建不起来（无窗口令牌、主题不对）时不要静默改判成"用户拒绝"，
+                // 至少留一条日志，否则现场只看到 DENIED_USER 猜不出原因。
+                Log.w(TAG, "failed to show confirmation dialog", it)
+                latch.countDown()
+            }
         }
         if (!posted) return false
 
@@ -93,6 +99,8 @@ class DialogConfirmationHandler @JvmOverloads constructor(
     private fun post(block: () -> Unit): Boolean = Handler(Looper.getMainLooper()).post(block)
 
     companion object {
+        private const val TAG = "AFG/Confirm"
+
         /** 最低等待 1 秒：再短用户来不及看清弹窗，等于随机拒绝。 */
         const val MIN_TIMEOUT_MS = 1_000L
     }

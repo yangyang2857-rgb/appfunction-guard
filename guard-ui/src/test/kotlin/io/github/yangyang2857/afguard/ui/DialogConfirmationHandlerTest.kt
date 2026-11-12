@@ -1,6 +1,7 @@
 package io.github.yangyang2857.afguard.ui
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.DialogInterface
 import android.os.Bundle
 import android.os.Looper
@@ -70,6 +71,17 @@ class DialogConfirmationHandlerTest {
         val worker = Thread { answer.set(handler.confirm(request(timeoutMillis))) }
         worker.start()
         return worker to answer
+    }
+
+    /** 环境自检：Robolectric 里起得来的弹窗，才谈得上验后面的行为。 */
+    @Test
+    fun `AlertDialog 在本测试环境中可以显示`() {
+        val dialog = AlertDialog.Builder(activity).setTitle("self check").create()
+        dialog.show()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertNotNull(ShadowAlertDialog.getLatestAlertDialog())
+        dialog.dismiss()
     }
 
     @Test
