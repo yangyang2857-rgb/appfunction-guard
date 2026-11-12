@@ -83,7 +83,20 @@ jobs:
 
       - name: Unit tests
         run: |
-          gradle testDebugUnitTest :guard-audit:test :guard-cli:test --stacktrace --no-daemon
+          gradle testDebugUnitTest :guard-core:testDebugUnitTest :guard-audit:test :guard-cli:test \
+            --stacktrace --no-daemon
+
+      # 拦截链的行为断言跑在 Robolectric 上，失败时报告比 logcat 好读得多。
+      - name: Upload unit test reports
+        if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: |
+            guard-core/build/reports/tests/**
+            guard-core/build/test-results/**
+          retention-days: 7
 
       # CLI 是"离线分析审计"的最后一环，构建通过不代表能用，所以真跑一遍。
       - name: CLI smoke test

@@ -35,18 +35,31 @@ adb logcat -c && adb logcat -s AFG:V AFG/Confirm:V AndroidRuntime:E
 
 ### 逐项检查（10 项，全部可在此阶段完成）
 
+> **先看这里**：下表里带 `[CI]` 的 7 项，判定逻辑已经由
+> `guard-core/src/test/kotlin/.../AfGuardInterceptTest.kt` 在 CI 上跑（Robolectric，
+> 假时钟 + 假元数据表），改代码即回归，不再需要每次手动点一遍。
+> 手工只剩 5 项：A3 的弹窗外观、A8、A9、A11、A12 —— 它们的共同点是
+> "依赖 Android 真实的窗口/进程/权限行为"，JVM 上测不出来。
+>
+> 映射关系（测试名见 `AfGuardInterceptTest`）：
+> A1→`ALLOW 直接执行并留下 ALLOWED 审计`，A2→`校验失败时业务不执行`，
+> A3→`CONFIRM_EACH 同意后执行`（仅链路，不含外观），A4→`CONFIRM_ONCE 在有效期内不重复弹窗`
+> + `到期后重新弹窗`，A5→`返回值里的手机号在离开前被替换` + `审计只记参数指纹 不记原文`，
+> A6→`ALWAYS_DENY 不执行业务且不可重试`，A7→`令牌桶用满后返回 RATE_LIMITED` + `补充令牌后放行`
+> + `PER_CALLER 限流互不牵连`，A10→同 A5 的审计两条。
+
 | # | 操作 | 期望 | 失败指向 |
 |---|---|---|---|
-| A1 | 点 `listNotes · ALLOW` | 立刻出结果，无弹窗，日志里一行 `ALLOWED` | 策略映射错 |
-| A2 | 点 `searchNotes("") · 校验` | 日志 `INVALID_ARGUMENT field=keyword`；**列表没变**（业务没执行） | KSP 校验器未生效 / 参数名不匹配 |
+| A1 `[CI]` | 点 `listNotes · ALLOW` | 立刻出结果，无弹窗，日志里一行 `ALLOWED` | 策略映射错 |
+| A2 `[CI]` | 点 `searchNotes("") · 校验` | 日志 `INVALID_ARGUMENT field=keyword`；**列表没变**（业务没执行） | KSP 校验器未生效 / 参数名不匹配 |
 | A3 | 点 `deleteNote · 待确认` | 弹窗显示调用方 + 风险等级；点"允许"后删除成功 | 确认 UI 未接线（`confirmationHandler.attach` 漏了） |
-| A4 | 紧接着再点一次 `deleteNote` | **不再弹窗**，直接执行 | 授权缓存（CONFIRM_ONCE，7 天）失效 |
-| A5 | 点 `exportNotes · 脱敏` | 返回值里手机号是 `138****8000`；logcat 里搜不到完整号码 | `redactOutput` 未生效 |
-| A6 | 点 `wipeAllNotes · 永久拒绝` | 不弹窗，日志 `DENIED_POLICY` / `FUNCTION_BLOCKED`，`retryable=false` | 阻断策略未命中 |
-| A7 | 点 `连发 9 次 deleteNote` | 前 5 次正常，第 6 次起 `RATE_LIMITED` 且带 `retryAfterMs` | 限流窗口/令牌桶参数 |
+| A4 `[CI]` | 紧接着再点一次 `deleteNote` | **不再弹窗**，直接执行 | 授权缓存（CONFIRM_ONCE，7 天）失效 |
+| A5 `[CI]` | 点 `exportNotes · 脱敏` | 返回值里手机号被替换成 `[REDACTED:PHONE]`；logcat 里搜不到完整号码 | `redactOutput` 未生效 |
+| A6 `[CI]` | 点 `wipeAllNotes · 永久拒绝` | 不弹窗，日志 `DENIED_POLICY` / `FUNCTION_BLOCKED`，`retryable=false` | 阻断策略未命中 |
+| A7 `[CI]` | 点 `连发 9 次 deleteNote` | 前 5 次正常，第 6 次起 `RATE_LIMITED` 且带 `retryAfterMs` | 限流窗口/令牌桶参数 |
 | A8 | 触发 `deleteNote` 后**放着弹窗不动**，等 20 秒 | 超时后返回拒绝，弹窗自动消失；再点"允许"不改变结果 | 超时保护 / 弹窗残留 |
 | A9 | 按 Home 键回桌面，再触发确认类函数 | 拒绝，不静默放行 | Activity 生命周期（`detach` 后应为无界面即拒） |
-| A10 | 点 `查看最近 20 条审计` | 每次调用一行，只有参数**指纹/形状**，无原文 | `AuditSink` 未接（`GuardConfig.apply()` 漏了） |
+| A10 `[CI]` | 点 `查看最近 20 条审计` | 每次调用一行，只有参数**指纹/形状**，无原文 | `AuditSink` 未接（`GuardConfig.apply()` 漏了） |
 
 补充两条只能靠"杀进程"来验的：
 

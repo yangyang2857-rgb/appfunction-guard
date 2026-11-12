@@ -12,6 +12,10 @@ androidx-core = { module = "androidx.core:core-ktx", version = "1.17.0" }
 # 显式写 1.9.1（KMP 分叉版本）会直接冲突 "Cannot find a version that satisfies"。
 androidx-annotation = { module = "androidx.annotation:annotation", version = "1.8.1" }
 ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
+junit = { module = "junit:junit", version = "4.13.2" }
+# guard-core 是 Android AAR，但拦截链只用到 Bundle / SystemClock，Robolectric 能把
+# 这部分放到 JVM 上跑，于是"策略、限流、校验、确认、脱敏、审计"不依赖真机也能断言。
+robolectric = { module = "org.robolectric:robolectric", version = "4.14.1" }
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "agp" }

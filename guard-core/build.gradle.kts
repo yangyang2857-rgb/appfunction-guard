@@ -25,6 +25,15 @@ android {
         jvmTarget = "17"
     }
 
+    // 拦截链的单测跑在 JVM 上（Robolectric 提供真实 Bundle / SystemClock），
+    // 目的是把「装到手机上一项项点按钮」变成可回归的断言。
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+    }
+
     // 只发布 release AAR，并附带 sources，便于使用方在 IDE 里读到 KDoc
     publishing {
         singleVariant("release") {
@@ -81,4 +90,7 @@ dependencies {
 
     // 编译期生成参数校验器，运行时不依赖 KSP
     ksp(project(":guard-ksp"))
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
 }

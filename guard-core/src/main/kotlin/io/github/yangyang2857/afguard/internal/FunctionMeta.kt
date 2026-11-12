@@ -47,6 +47,19 @@ object MetadataRegistry {
         return table?.metadataOf(functionId)
     }
 
+    /**
+     * 显式指定元数据表，优先级高于反射加载。
+     *
+     * 两个用途：宿主要手工声明策略（不想走 KSP）时；以及单测里注入固定元数据。
+     * 传 null 会把状态复位，下次调用重新走反射。
+     */
+    fun setOverride(generated: GeneratedGuardTable?) {
+        synchronized(this) {
+            table = generated
+            loaded = generated != null
+        }
+    }
+
     private fun ensureLoaded() {
         if (loaded) return
         synchronized(this) {
