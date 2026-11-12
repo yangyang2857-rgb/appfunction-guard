@@ -3,7 +3,7 @@
 #
 # 前置：
 #   1. 在 https://central.sonatype.com/account 生成 User Token（一对 username/password）
-#   2. 命名空间 io.github.yangyang2857 已在该账号下验证通过
+#   2. 命名空间 io.github.yangyang2857-rgb 已在该账号下验证通过
 #   3. bundle 内每个文件都有 .asc 签名，且签名公钥能在 keyserver 上查到
 #
 # 用法：

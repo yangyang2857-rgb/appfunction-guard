@@ -128,7 +128,7 @@ jobs:
           gradle publishAllToLocal --stacktrace --no-daemon
           V=0.1.0-alpha3
           for M in guard-audit guard-core guard-ksp guard-ui; do
-            D="$HOME/.m2/repository/io/github/yangyang2857/$M/$V"
+            D="$HOME/.m2/repository/io/github/yangyang2857-rgb/$M/$V"
             echo "--- $M ---"
             ls -1 "$D" || { echo "missing directory: $M"; exit 1; }
             test -f "$D/$M-$V.pom"          || { echo "missing pom: $M"; exit 1; }

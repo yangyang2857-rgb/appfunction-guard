@@ -22,7 +22,7 @@ cd "$REPO_ROOT"
 
 MODULES="guard-audit guard-core guard-ksp guard-ui"
 VERSION=$(sed -n 's/.*version = "\([^"]*\)".*/\1/p' build.gradle.kts | head -1)
-GROUP_PATH="io/github/yangyang2857"
+GROUP_PATH="io/github/yangyang2857-rgb"
 BUNDLE="build/distributions/central-bundle.zip"
 STAGE="build/central-repo"
 
@@ -116,7 +116,7 @@ if [ "$VERIFY_ONLY" -eq 0 ] && [ -n "${SIGNING_KEY:-}" ]; then
 
   rm -f "$BUNDLE"
   mkdir -p "$(dirname "$BUNDLE")"
-  ( cd "$STAGE" && zip -qry "$REPO_ROOT/$BUNDLE" . -x "io/github/yangyang2857/*/maven-metadata.xml*" )
+  ( cd "$STAGE" && zip -qry "$REPO_ROOT/$BUNDLE" . -x "io/github/yangyang2857-rgb/*/maven-metadata.xml*" )
   echo "rebuilt bundle with .asc files"
 fi
 

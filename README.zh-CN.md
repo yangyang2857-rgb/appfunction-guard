@@ -208,10 +208,10 @@ dependencies {
 > 目标坐标（首次上传 Maven Central 还差我的 Sonatype 凭据，见 [docs/PUBLISHING.md](docs/PUBLISHING.md)）：
 >
 > ```
-> io.github.yangyang2857:guard-core:0.1.0-alpha3
-> io.github.yangyang2857:guard-ksp:0.1.0-alpha3
-> io.github.yangyang2857:guard-audit:0.1.0-alpha3
-> io.github.yangyang2857:guard-ui:0.1.0-alpha3
+> io.github.yangyang2857-rgb:guard-core:0.1.0-alpha3
+> io.github.yangyang2857-rgb:guard-ksp:0.1.0-alpha3
+> io.github.yangyang2857-rgb:guard-audit:0.1.0-alpha3
+> io.github.yangyang2857-rgb:guard-ui:0.1.0-alpha3
 > ```
 >
 > 上传之前用 `includeBuild` 引本仓库。

@@ -4,7 +4,7 @@
 #   1. 跑过 provision-signing-key，仓库里有 SIGNING_KEY / SIGNING_PASSWORD
 #   2. 仓库里有 MAVEN_CENTRAL_USERNAME / MAVEN_CENTRAL_PASSWORD
 #      （central.sonatype.com → Account → Generate User Token，别填登录密码）
-#   3. namespace io.github.yangyang2857 已在 Portal 验证过（用 GitHub 登录会自动完成）
+#   3. namespace io.github.yangyang2857-rgb 已在 Portal 验证过（用 GitHub 登录会自动完成）
 #
 # 产物：Central Portal 上的一个 deployment，publishingType 默认 AUTOMATIC（校验通过即发布）。
 
