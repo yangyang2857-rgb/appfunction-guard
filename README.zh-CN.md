@@ -55,6 +55,24 @@ AppFunctionService.onExecuteFunction()
 
 ---
 
+## 安装
+
+```kotlin
+dependencies {
+    implementation("io.github.yangyang2857-rgb:guard-core:0.1.0-alpha3")
+    ksp("io.github.yangyang2857-rgb:guard-ksp:0.1.0-alpha3")
+
+    // 可选：现成的确认弹窗
+    implementation("io.github.yangyang2857-rgb:guard-ui:0.1.0-alpha3")
+    // 可选：不带 Android 依赖的审计记录
+    implementation("io.github.yangyang2857-rgb:guard-audit:0.1.0-alpha3")
+}
+```
+
+已在 Maven Central 发布，`repositories` 里有 `mavenCentral()` 就能解析，不需要 JitPack，也不需要 `includeBuild`。
+
+---
+
 ## 快速接入
 
 ```kotlin
@@ -199,22 +217,12 @@ KSP 生成的表缺失时（构建配置错了），校验被跳过，但每条�
 - KSP
 
 ```kotlin
-dependencies {
-    implementation("com.github.yangyang2857-rgb.appfunction-guard:guard-core:0.1.0-alpha")
-    ksp("com.github.yangyang2857-rgb.appfunction-guard:guard-ksp:0.1.0-alpha")
-}
+// 坐标与上面「安装」一致
+implementation("io.github.yangyang2857-rgb:guard-core:0.1.0-alpha3")
+ksp("io.github.yangyang2857-rgb:guard-ksp:0.1.0-alpha3")
 ```
 
-> 目标坐标（首次上传 Maven Central 还差我的 Sonatype 凭据，见 [docs/PUBLISHING.md](docs/PUBLISHING.md)）：
->
-> ```
-> io.github.yangyang2857-rgb:guard-core:0.1.0-alpha3
-> io.github.yangyang2857-rgb:guard-ksp:0.1.0-alpha3
-> io.github.yangyang2857-rgb:guard-audit:0.1.0-alpha3
-> io.github.yangyang2857-rgb:guard-ui:0.1.0-alpha3
-> ```
->
-> 上传之前用 `includeBuild` 引本仓库。
+四个库模块自 2026-11-12 起已在 Maven Central，直接从 `https://repo1.maven.org/maven2/` 解析，不用 JitPack，也不用本地构建。发布流程见 [docs/PUBLISHING.md](docs/PUBLISHING.md)。
 
 ---
 
@@ -228,7 +236,7 @@ dependencies {
 - [x] KSP 处理器（生成校验器 + 元数据表）
 - [x] `guard-ui` 确认弹窗（`DialogConfirmationHandler`），sample 自己就在用
 - [x] `guard-cli` 审计导出（CSV / JSONL + summary），CI 有冒烟
-- [x] Maven Central *元数据* —— POM / sources / javadoc 三件套都能产出，CI 校验 `gradle publishAllToLocal`；真正上传还需要 Sonatype 凭据与 GPG 密钥，见 [docs/PUBLISHING.md](docs/PUBLISHING.md)
+- [x] Maven Central —— `guard-core` / `guard-ksp` / `guard-audit` / `guard-ui` 的 `0.1.0-alpha3` 已发布，可直接从 `repo1.maven.org` 下载（GPG 签名，带 sources 与 javadoc）。坐标用 `io.github.yangyang2857-rgb`，因为 Portal 只放行与账号名一致的 `io.github.*`。流程见 [docs/PUBLISHING.md](docs/PUBLISHING.md)
 - [ ] **真机端到端验证** —— CI 没设备也没 Agent 宿主，拦截链还没对着真实 `AppFunctionService` 跑过。清单见 [docs/DEVICE_TEST.md](docs/DEVICE_TEST.md)
 
 早期阶段，最有价值的是对**注解设计**的反馈，不是 bug 报告。
@@ -250,7 +258,7 @@ dependencies {
 | W1 | 真机跑通端到端，写清楚到底哪里炸了 |
 | W2 | `guard-ui` 确认面板 + 审计查看器 |
 | W3 | `guard-cli` 导出、策略 lint（`afg check`） |
-| W4 | Maven Central，v0.1.0 |
+| W4 | Maven Central，v0.1.0 —— `0.1.0-alpha3` 已发布，`v0.1.0` 等真机验证 |
 
 ---
 

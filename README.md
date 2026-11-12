@@ -59,6 +59,24 @@ Everything runs before your business code. Nothing is a decorator you can forget
 
 ---
 
+## Install
+
+```kotlin
+dependencies {
+    implementation("io.github.yangyang2857-rgb:guard-core:0.1.0-alpha3")
+    ksp("io.github.yangyang2857-rgb:guard-ksp:0.1.0-alpha3")
+
+    // optional: ready-made confirmation dialog
+    implementation("io.github.yangyang2857-rgb:guard-ui:0.1.0-alpha3")
+    // optional: audit records without pulling in Android
+    implementation("io.github.yangyang2857-rgb:guard-audit:0.1.0-alpha3")
+}
+```
+
+Published on Maven Central — `mavenCentral()` in `repositories` is all you need, no JitPack and no `includeBuild`.
+
+---
+
 ## Quick start
 
 ```kotlin
@@ -237,22 +255,12 @@ What actually broke during week 1, written down while it still hurt: [给 Androi
 - KSP for annotation processing
 
 ```kotlin
-dependencies {
-    implementation("com.github.yangyang2857-rgb.appfunction-guard:guard-core:0.1.0-alpha")
-    ksp("com.github.yangyang2857-rgb.appfunction-guard:guard-ksp:0.1.0-alpha")
-}
+// same coordinates as in Install above
+implementation("io.github.yangyang2857-rgb:guard-core:0.1.0-alpha3")
+ksp("io.github.yangyang2857-rgb:guard-ksp:0.1.0-alpha3")
 ```
 
-> Target coordinates (first upload to Maven Central is pending my Sonatype credentials — see [docs/PUBLISHING.md](docs/PUBLISHING.md)):
->
-> ```
-> io.github.yangyang2857-rgb:guard-core:0.1.0-alpha3
-> io.github.yangyang2857-rgb:guard-ksp:0.1.0-alpha3
-> io.github.yangyang2857-rgb:guard-audit:0.1.0-alpha3
-> io.github.yangyang2857-rgb:guard-ui:0.1.0-alpha3
-> ```
->
-> Until then, `includeBuild` the repo.
+All four library modules are on Maven Central since 2026-11-12 — resolve them straight from `https://repo1.maven.org/maven2/`, no JitPack, no local build. Release process: [docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 ---
 
@@ -268,7 +276,7 @@ Honest state of things:
 - [x] `sample/` — runnable demo app covering all four policies, rate limiting, redaction, audit viewer
 - [x] `guard-ui` — drop-in confirmation dialog (`DialogConfirmationHandler`), used by `sample` itself
 - [x] `guard-cli` — audit export to CSV / JSONL + summary, smoke tested in CI
-- [x] Maven Central *metadata* — POM / sources / javadoc artifacts all build; `gradle publishAllToLocal` is verified in CI. Actual upload needs my Sonatype credentials + GPG key: [docs/PUBLISHING.md](docs/PUBLISHING.md)
+- [x] Maven Central — `0.1.0-alpha3` of `guard-core` / `guard-ksp` / `guard-audit` / `guard-ui` is published and downloadable from `repo1.maven.org` (GPG signed, sources + javadoc attached). Coordinates use `io.github.yangyang2857-rgb` because Portal only grants `io.github.*` for the account name. Process: [docs/PUBLISHING.md](docs/PUBLISHING.md)
 - [ ] **End-to-end verification on a real device** — CI has no device and no Agent host, so the interception chain has never run against a live `AppFunctionService`. Checklist: [docs/DEVICE_TEST.md](docs/DEVICE_TEST.md)
 
 CI: [`build.yml`](.github/workflows/build.yml) runs on every push to `main` — assembles all four library modules plus `sample` / `guard-cli`, runs unit tests, smoke tests the CLI, verifies publication metadata. Details: [docs/CI.md](docs/CI.md)
@@ -294,7 +302,7 @@ Background reading on the risk model: the AppFunctions security analysis coverin
 | 1 | Run it end-to-end on a device, write up what actually broke | open — checklist ready in [docs/DEVICE_TEST.md](docs/DEVICE_TEST.md) |
 | 2 | `guard-ui` confirmation sheet + audit viewer | dialog done; audit viewer still lives in `sample` |
 | 3 | `guard-cli` export, policy lint (`afg check`) | export done; `afg check` not started |
-| 4 | Maven Central, v0.1.0 | metadata ready, upload pending credentials |
+| 4 | Maven Central, v0.1.0 | `0.1.0-alpha3` published; `v0.1.0` waits on device verification |
 
 ---
 
