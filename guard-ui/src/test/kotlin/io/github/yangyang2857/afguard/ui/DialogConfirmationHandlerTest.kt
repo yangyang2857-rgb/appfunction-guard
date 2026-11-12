@@ -74,6 +74,21 @@ class DialogConfirmationHandlerTest {
     }
 
     /** 环境自检：Robolectric 里起得来的弹窗，才谈得上验后面的行为。 */
+    /**
+     * 弹窗是后台线程 post 到主线程才建的，主线程单次 idle 时它可能还没入队，
+     * 所以这里轮询推主线程队列，直到窗口出现或超时。
+     */
+    private fun awaitDialog(timeoutMs: Long = 2_000) = run {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        var found: android.app.AlertDialog? = null
+        while (found == null && System.currentTimeMillis() < deadline) {
+            shadowOf(Looper.getMainLooper()).idle()
+            found = ShadowAlertDialog.getLatestAlertDialog()
+            if (found == null) Thread.sleep(10)
+        }
+        found
+    }
+
     @Test
     fun `AlertDialog 在本测试环境中可以显示`() {
         val dialog = AlertDialog.Builder(activity).setTitle("self check").create()
@@ -118,8 +133,7 @@ class DialogConfirmationHandlerTest {
         handler.attach(activity)
         val (worker, answer) = confirmFromWorker(3_000)
 
-        shadowOf(Looper.getMainLooper()).idle()
-        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        val dialog = awaitDialog()
         assertNotNull("确认请求必须真的把弹窗显示出来", dialog)
         assertTrue(dialog!!.isShowing)
 
@@ -134,9 +148,8 @@ class DialogConfirmationHandlerTest {
         handler.attach(activity)
         val (worker, answer) = confirmFromWorker(3_000)
 
-        shadowOf(Looper.getMainLooper()).idle()
-        val dialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull(dialog)
+        val dialog = awaitDialog()
+        assertNotNull("确认请求必须真的把弹窗显示出来", dialog)
 
         dialog!!.getButton(DialogInterface.BUTTON_NEGATIVE).performClick()
         worker.join(3_000)
@@ -150,9 +163,8 @@ class DialogConfirmationHandlerTest {
         // 最短等待 1 秒，这里正好用下限：不点，等它自己放弃
         val (worker, answer) = confirmFromWorker(DialogConfirmationHandler.MIN_TIMEOUT_MS)
 
-        shadowOf(Looper.getMainLooper()).idle()
-        val dialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull(dialog)
+        val dialog = awaitDialog()
+        assertNotNull("确认请求必须真的把弹窗显示出来", dialog)
 
         worker.join(5_000)
         assertFalse("超时按拒绝处理", answer.get())
