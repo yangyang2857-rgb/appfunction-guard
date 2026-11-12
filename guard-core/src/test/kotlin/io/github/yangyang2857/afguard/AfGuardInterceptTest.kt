@@ -1,6 +1,8 @@
 package io.github.yangyang2857.afguard
 
 import android.os.Bundle
+import io.github.yangyang2857.afguard.audit.DecisionKind
+import io.github.yangyang2857.afguard.audit.RingBufferAuditSink
 import io.github.yangyang2857.afguard.internal.FunctionMeta
 import io.github.yangyang2857.afguard.internal.GeneratedGuardTable
 import io.github.yangyang2857.afguard.internal.InMemoryConsentStore
