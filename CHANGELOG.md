@@ -17,6 +17,7 @@
 - `guard-core` 的审计类型改为 `typealias` 指向 `guard-audit`，避免同一模型两处定义
 - `sample` 改用 `guard-ui` 的确认弹窗，删掉自带的重复实现
 - CI 扩到四模块装配 + 三模块单测 + CLI 冒烟 + 发布元数据校验
+- 发布坐标 group 定为 `io.github.yangyang2857-rgb`（Central 只授权与 GitHub 账号名一致的 `io.github.*` 命名空间）
 
 ### Known limitations
 - 仍未在真机跑端到端验证，验收清单待填
