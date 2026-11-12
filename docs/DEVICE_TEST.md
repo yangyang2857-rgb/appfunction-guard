@@ -7,14 +7,14 @@ CI 能证明的是"能构建、单测通过、CLI 能跑"，**证明不了**拦�
 | 阶段 | 验的是什么 | 前置条件 | 耗时 |
 |---|---|---|---|
 | **阶段 A** | guard 拦截链本身（策略、校验、确认、脱敏、限流、审计） | 一台 Android 8.0+ 手机，装 sample APK | 20 分钟 |
-| **阶段 B** | 与平台 AppFunctions 的接线（函数被系统收录、`adb` 直接调用、Agent 真实发起） | Android 16+ 设备 + 项目升级到 compileSdk 37 / AGP 9.1+ | 1～2 小时 + 一次构建改造 |
+| **阶段 B** | 与平台 AppFunctions 的接线（函数被系统收录、`adb` 直接调用、Agent 真实发起） | Android 16+ 设备（构建侧前置已满足：compileSdk 37 / AGP 9.1.0，sample 已接线） | 1～2 小时 |
 
 阶段 A 不需要任何平台 API：sample 首页每个按钮都等价于一次 Agent 调用，走的是同一条
 `AfGuard.intercept(...)` 路径，只是调用方从"系统 Agent"换成了"你自己"。**策略、校验、
 确认、限流、脱敏、审计这六件事，在阶段 A 就能全部验完。**
 
-阶段 B 才是 `docs/` 里原本设想的那套端到端验收。它现在还做不了，卡点很具体（见文末
-"阶段 B 的前置条件"）。
+阶段 B 才是 `docs/` 里原本设想的那套端到端验收。构建侧前置已经补齐，`sample` 也接好了
+`@AppFunctionServiceEntryPoint`，剩下的只有"插上设备跑一遍"（见文末"阶段 B：已接线，待真机"）。
 
 ---
 
@@ -90,13 +90,18 @@ adb logcat -c && adb logcat -s AFG:V AFG/Confirm:V AndroidRuntime:E
 
 ---
 
-## 阶段 B：接上真实 AppFunctions（当前做不了，卡点在下面）
+## 阶段 B：已接线，待真机
 
-### 卡点
+### 状态
 
-`sample` 里**没有 `@AppFunction`，也没有 `AppFunctionService`**（`NoteFunctions.kt` 顶部的注释
-写明了这是刻意的：为了不让 `guard-core` 依赖 alpha 阶段的平台库）。因此现在把 APK 装到
-Android 16 设备上，跑：
+接线已落地（PR 见仓库 `build/phase-b-wiring`）：`compileSdk 37`、`AGP 9.1.0`、
+`androidx.appfunctions 1.0.0-rc01` + KSP 编译器，`sample` 新增带 `@AppFunctionServiceEntryPoint`
+的 `BaseNoteAppFunctionService`，四个函数统一走 `AfGuard.intercept(...)`。CI 产物里能验到三件事：
+`NoteAppFunctionService` 已生成、`assets/note_app_function_service.xml` 收录了四个函数、
+manifest 带 `BIND_APP_FUNCTION_SERVICE` 权限与 `android.app.appfunctions.AppFunctionService` action。
+
+接线完成之前的状态长这样（留档）：`sample` 里既没有 `@AppFunction` 也没有
+`AppFunctionService`，把 APK 装到 Android 16 设备上跑：
 
 ```bash
 adb shell cmd app_function list-app-functions
@@ -155,12 +160,19 @@ adb shell "cmd app_function execute-app-function \
   两者对得上，否则策略会全部落到默认分支 —— 这是接平台时最容易踩的一个坑。
 - **超时默认 20s**：`DialogConfirmationHandler.MIN_TIMEOUT_MS = 1s`，传更小的值会被兜到 1s。
 - **风险文案**：`Risk` 枚举的中文展示是 sample 自己拼的，不属于库的契约，改文案不影响行为。
+- **caller 切线程后会退化**：`DefaultCallerResolver` 依赖 `Binder.getCallingUid()`，而
+  `NoteAppFunctionService` 的函数体跑在 `Dispatchers.IO` 上；Binder 身份是线程局部的，切过去
+  之后大概率读回自己的 uid。表现是 B2 里 `callerPackage` 等于本 App 而不是调用方，策略落到
+  "不区分调用方"分支（限流、审计仍生效）。需要精确 caller 时由宿主注入自定义
+  `CallerResolver`，库不擅自改 API。
+- **schema 不是资源**：KSP 把函数清单写进 `assets/`，所以 manifest 里**不要**写
+  `android:resource="@xml/..."`，AAPT 会直接报 `resource not found`。
 
 ## 实测记录
 
 | 日期 | 设备 / 系统 | 阶段 | 结论 | 备注 |
 |---|---|---|---|---|
 | — | — | A | 未测 | `0.1.0-alpha3` 尚未在真机上跑过 |
-| — | — | B | 阻塞 | 需先升级 compileSdk 37 / AGP 9.1+ 并补 `AppFunctionService` |
+| 2026-11-12 | CI 构建产物（非真机） | B | 代码侧完成 | compileSdk 37 / AGP 9.1.0 已升级，Service 与 assets schema 已随 APK 打包，manifest 注册就位；B1～B5 待真机执行 |
 
 每验完一项就把对应行改成 `✅`，失败写清项号 + logcat 片段，然后开 issue。

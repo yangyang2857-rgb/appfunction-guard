@@ -4,6 +4,8 @@ kotlin = "2.2.20"
 ksp = "2.2.20-2.0.2"
 compileSdk = "37"
 minSdk = "26"
+appfunctions = "1.0.0-rc01"
+coroutines = "1.10.2"
 
 [libraries]
 androidx-core = { module = "androidx.core:core-ktx", version = "1.17.0" }
@@ -12,6 +14,11 @@ androidx-core = { module = "androidx.core:core-ktx", version = "1.17.0" }
 # 显式写 1.9.1（KMP 分叉版本）会直接冲突 "Cannot find a version that satisfies"。
 androidx-annotation = { module = "androidx.annotation:annotation", version = "1.8.1" }
 ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
+# 阶段 B：平台接线依赖。rc01 起 App Function 用编译期 @AppFunctionServiceEntryPoint 架构，
+# KSP 负责生成具体 Service 与 XML schema，运行时不反射。
+androidx-appfunctions = { module = "androidx.appfunctions:appfunctions", version.ref = "appfunctions" }
+androidx-appfunctions-compiler = { module = "androidx.appfunctions:appfunctions-compiler", version.ref = "appfunctions" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 junit = { module = "junit:junit", version = "4.13.2" }
 # guard-core 是 Android AAR，但拦截链只用到 Bundle / SystemClock，Robolectric 能把
 # 这部分放到 JVM 上跑，于是"策略、限流、校验、确认、脱敏、审计"不依赖真机也能断言。
