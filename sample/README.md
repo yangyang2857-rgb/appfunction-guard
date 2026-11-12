@@ -82,7 +82,7 @@ class NoteAppFunctionService : AppFunctionService() {
 `BaseNoteAppFunctionService.kt` 把这四个函数真正注册成系统可见的 App Function：
 
 - `@AppFunctionServiceEntryPoint(serviceName = "NoteAppFunctionService", appFunctionXmlFileName = "note_app_function_service")` 标在**抽象类**上，KSP 生成具体 Service 与 `res/xml/note_app_function_service.xml`；业务侧不写 `onExecuteFunction` 的 `when` 分发。
-- manifest 里那条 `<service>` 是系统发现的唯一通道：`BIND_APP_FUNCTION_SERVICE` 权限、`android.app.appfunctions.AppFunctionService` action、`<property android:name="android.app.appfunctions" android:resource="@xml/note_app_function_service" />`，三者缺一就索引不到。
+- manifest 里那条 `<service>` 是系统发现的入口：`BIND_APP_FUNCTION_SERVICE` 权限 + `android.app.appfunctions.AppFunctionService` action，缺一就索引不到。函数清单不在这里声明——生成代码把 schema 写进 `assets/`，由 `AppFunctionService` 实现的 `AppFunctionInventoryProvider` 交给系统，所以不要写 `android:resource="@xml/..."`（assets 不是资源，AAPT 会直接报 `resource not found`）。
 - 每个函数都是 `suspend` + `withContext(Dispatchers.IO)`：函数默认跑在 UI 线程，而 guard 的确认链路是阻塞等用户点击。不切线程就是"UI 线程等 latch、弹窗等 UI 线程"的死锁。
 - 返回值统一经 `AfGuard.intercept`；被拦截时返回 `AFGUARD_BLOCKED {json}`，Agent 能看到拒绝原因而不是一个不透明异常。
 
