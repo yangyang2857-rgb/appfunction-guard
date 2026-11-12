@@ -47,6 +47,23 @@ jobs:
           done
           ls "$SDK/platforms" "$SDK/build-tools" || true
 
+      # Central 校验签名时会去 keyserver 查公钥；runner 网络比本地稳定，所以每次发布前
+      # 把公钥重发一遍（幂等，失败不致命）。
+      - name: Publish public key to keyservers
+        continue-on-error: true
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          set -uo pipefail
+          GNUPGHOME=$(mktemp -d); export GNUPGHOME; chmod 700 "$GNUPGHOME"
+          printf '%s' "$SIGNING_KEY" | base64 -d | gpg --batch --quiet --import
+          FPR=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
+          echo "fingerprint: $FPR"
+          for KS in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org hkp://pgp.mit.edu; do
+            echo "--- $KS"
+            timeout 60 gpg --keyserver "$KS" --send-keys "$FPR" && echo "uploaded to $KS" || echo "failed: $KS (non-fatal)"
+          done
+
       - name: Build signed bundle
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
