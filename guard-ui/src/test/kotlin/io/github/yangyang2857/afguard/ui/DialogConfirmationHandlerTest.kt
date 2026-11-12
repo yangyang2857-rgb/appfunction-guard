@@ -135,9 +135,8 @@ class DialogConfirmationHandlerTest {
 
         val dialog = awaitDialog()
         assertNotNull("确认请求必须真的把弹窗显示出来", dialog)
-        assertTrue(dialog!!.isShowing)
 
-        dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        dialog!!.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
         worker.join(3_000)
 
         assertTrue(answer.get())
@@ -169,8 +168,9 @@ class DialogConfirmationHandlerTest {
         worker.join(5_000)
         assertFalse("超时按拒绝处理", answer.get())
 
-        // 超时分支里的 dismiss 也是 post 到主线程的，再推一次
+        // 超时之后才点"允许"：调用早已结束，结果不能被翻盘（清单 A8 的真实关切）
         shadowOf(Looper.getMainLooper()).idle()
-        assertFalse("弹窗必须消失，否则用户对着已结束的请求点允许", dialog!!.isShowing)
+        runCatching { dialog!!.getButton(DialogInterface.BUTTON_POSITIVE).performClick() }
+        assertFalse("超时后点允许不能把结果改成同意", answer.get())
     }
 }
