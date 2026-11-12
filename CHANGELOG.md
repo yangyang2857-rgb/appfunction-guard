@@ -2,6 +2,16 @@
 
 以 [Semantic Versioning](https://semver.org/) 管理。
 
+## [Unreleased]
+
+### Changed
+- 构建体系升到 **AGP 9.1.1 / Gradle 9.3.1 / compileSdk 37**。AGP 9 是主版本升级（内置 Kotlin、新 DSL、Gradle 9），这次先用 `android.builtInKotlin=false` + `android.newDsl=false` 保住现有 `kotlin-android` 写法，让改动面停在"版本 + 平台"，构建写法迁移单独做一次
+- 补删 `sample` 里 alpha3 声称删过、实际仍在的 `DialogConfirmationHandler` 旧副本（无人引用，缺主线程防死锁与超时收窗），`sample/README.md` 里"`CountDownLatch` + `runOnUiThread` 桥接"的描述改为指向 `guard-ui` 的实现，并写清 attach/detach、超时收窗、主线程判否四条约束
+- CI 改用 Gradle 9.3.1，Android SDK Platform 装 37（保留 36 供旧设备镜像）
+
+### Why
+`androidx.appfunctions` 1.0.0-rc01 要求 compileSdk 37 + AGP 9.1+，不升就接不上阶段 B 的真机验证；而 AGP 9.1.1 又要求 Gradle ≥ 9.3.1。
+
 ## [0.1.0-alpha3] - 2026-11-12
 
 把"只有核心库"补成"能发、能用、能验收"。CI 仍然只证明构建与单测，真机那一格依旧空着。

@@ -211,7 +211,7 @@ KSP 生成的表缺失时（构建配置错了），校验被跳过，但每条�
 
 ## 环境要求
 
-- `compileSdk 36`（AGP 8.13+）
+- `compileSdk 37`（AGP 9.1+，Gradle 9.3.1+）
 - `minSdk 26` —— 库本身只碰 `Bundle` + `Binder`，低版本也能跑；**AppFunctions 本身要求设备是 API 36**
 - Kotlin 2.x
 - KSP

@@ -35,4 +35,4 @@ gradle testDebugUnitTest :guard-audit:test :guard-cli:test
 gradle publishAllToLocal   # 校验发布元数据，不需要密钥
 ```
 
-需要 JDK 17 与 Android SDK Platform 36。仓库里没有 Gradle Wrapper，用本机 Gradle 8.13；想固定版本可以自己跑一次 `gradle wrapper`。
+需要 JDK 17 与 Android SDK Platform 37。仓库里没有 Gradle Wrapper，用本机 Gradle 9.3.1（AGP 9.1 要求 Gradle ≥ 9.3.1）；想固定版本可以自己跑一次 `gradle wrapper`。

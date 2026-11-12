@@ -7,7 +7,7 @@
 ## 跑起来
 
 ```bash
-gradle :sample:installDebug   # 仓库未带 wrapper，需本机 Gradle 8.13；或先执行 gradle wrapper 生成
+gradle :sample:installDebug   # 仓库未带 wrapper，需本机 Gradle 9.3.1；或先执行 gradle wrapper 生成
 ```
 
 打开 **AFG Sample**，界面上每个按钮都等价于一次 Agent 发起的调用 —— 走的是 `AfGuard.intercept()`，不是直接调业务函数。
@@ -74,7 +74,7 @@ class NoteAppFunctionService : AppFunctionService() {
 
 ## 两个容易接错的点
 
-1. **不要在 UI 线程同步等弹窗。** `ConfirmationHandler.confirm()` 是阻塞调用，而 `AlertDialog` 必须在主线程创建。示例的做法是：调用方在后台线程，`confirm()` 里用 `CountDownLatch` + `runOnUiThread` 把两边界接起来（见 `DialogConfirmationHandler`）。
+1. **不要在 UI 线程同步等弹窗。** `ConfirmationHandler.confirm()` 是阻塞调用，而 `AlertDialog` 必须在主线程创建。sample 不再自带实现，直接用 `guard-ui` 的 `io.github.yangyang2857.afguard.ui.DialogConfirmationHandler`：调用方在后台线程，`confirm()` 里用 `CountDownLatch` + `runOnUiThread` 把两边界接起来；在 `Activity.onCreate` 里 `attach(this)`、`onDestroy` 里 `detach(this)` 跟随宿主生命周期，超时会 dismiss 残留弹窗并返回拒绝，在主线程调用 `confirm()` 直接判否而不是死锁。自己实现时这四条缺一不可。
 2. **`GuardConfig.init()` 之后再改 `auditSink`，要补一次 `GuardConfig.apply()`。** 审计出口是在 `init` 时挂上的，换出口不重新挂就会静默丢记录。
 
 ## 已知限制
