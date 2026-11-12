@@ -131,28 +131,31 @@ class DialogConfirmationHandlerTest {
     @Test
     fun `点允许返回 true`() {
         handler.attach(activity)
-        val (worker, answer) = confirmFromWorker(3_000)
+        // 给足 8 秒，下面的 3 秒 join 才有区分度：能结束说明是点击触发的，不是超时兜底
+        val (worker, answer) = confirmFromWorker(8_000)
 
         val dialog = awaitDialog()
         assertNotNull("确认请求必须真的把弹窗显示出来", dialog)
 
-        dialog!!.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        shadowOf(dialog!!).clickOn(DialogInterface.BUTTON_POSITIVE)
         worker.join(3_000)
 
+        assertFalse("点完应该立刻返回，而不是拖到超时", worker.isAlive)
         assertTrue(answer.get())
     }
 
     @Test
     fun `点拒绝返回 false`() {
         handler.attach(activity)
-        val (worker, answer) = confirmFromWorker(3_000)
+        val (worker, answer) = confirmFromWorker(8_000)
 
         val dialog = awaitDialog()
         assertNotNull("确认请求必须真的把弹窗显示出来", dialog)
 
-        dialog!!.getButton(DialogInterface.BUTTON_NEGATIVE).performClick()
+        shadowOf(dialog!!).clickOn(DialogInterface.BUTTON_NEGATIVE)
         worker.join(3_000)
 
+        assertFalse("点完应该立刻返回，而不是拖到超时", worker.isAlive)
         assertFalse(answer.get())
     }
 
@@ -170,7 +173,7 @@ class DialogConfirmationHandlerTest {
 
         // 超时之后才点"允许"：调用早已结束，结果不能被翻盘（清单 A8 的真实关切）
         shadowOf(Looper.getMainLooper()).idle()
-        runCatching { dialog!!.getButton(DialogInterface.BUTTON_POSITIVE).performClick() }
+        runCatching { shadowOf(dialog!!).clickOn(DialogInterface.BUTTON_POSITIVE) }
         assertFalse("超时后点允许不能把结果改成同意", answer.get())
     }
 }
