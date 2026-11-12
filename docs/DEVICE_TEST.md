@@ -35,18 +35,30 @@ adb logcat -c && adb logcat -s AFG:V AFG/Confirm:V AndroidRuntime:E
 
 ### 逐项检查（10 项，全部可在此阶段完成）
 
-> **先看这里**：下表里带 `[CI]` 的 7 项，判定逻辑已经由
+> **先看这里**：下表里带 `[CI]` 的 9 项，判定逻辑已经由
 > `guard-core/src/test/kotlin/.../AfGuardInterceptTest.kt` 在 CI 上跑（Robolectric，
 > 假时钟 + 假元数据表），改代码即回归，不再需要每次手动点一遍。
-> 手工只剩 5 项：A3 的弹窗外观、A8、A9、A11、A12 —— 它们的共同点是
+> 手工只剩 3 项：A3 的弹窗外观与按钮点击、A11、A12 —— 它们的共同点是
 > "依赖 Android 真实的窗口/进程/权限行为"，JVM 上测不出来。
 >
 > 映射关系（测试名见 `AfGuardInterceptTest`）：
 > A1→`ALLOW 直接执行并留下 ALLOWED 审计`，A2→`校验失败时业务不执行`，
-> A3→`CONFIRM_EACH 同意后执行`（仅链路，不含外观），A4→`CONFIRM_ONCE 在有效期内不重复弹窗`
+> A3→`CONFIRM_EACH 同意后执行`（仅链路，不含外观与点击），A4→`CONFIRM_ONCE 在有效期内不重复弹窗`
 > + `到期后重新弹窗`，A5→`返回值里的手机号在离开前被替换` + `审计只记参数指纹 不记原文`，
 > A6→`ALWAYS_DENY 不执行业务且不可重试`，A7→`令牌桶用满后返回 RATE_LIMITED` + `补充令牌后放行`
 > + `PER_CALLER 限流互不牵连`，A10→同 A5 的审计两条。
+>
+> A8 / A9 由 `guard-ui/src/test/kotlin/.../DialogConfirmationHandlerTest.kt` 覆盖：
+> A8→`超时返回 false 并收掉残留弹窗`，A9→`没有 Activity 时拒绝` + `detach 之后拒绝且不再弹窗`，
+> 另加一条 `主线程调用直接拒绝且不弹窗`（Agent 线程与主线程撞车时不能互相等死）。
+>
+> 这组测试跑在 Robolectric 上，有一处必须说清：**AlertDialog 在 JVM 里没有真实窗口，
+> 按钮点击回调不可靠**，所以"点允许后真的删掉""点拒绝后真的没删"这两件事，
+> 连同"超时后弹窗是否从屏幕上消失"，仍然只能真机验（见 A3、A8 的手工备注）。
+> 已自动化的部分只是**决策与生命周期**：超时判否、无界面判否、detach 后判否、主线程不自等。
+
+**当前状态（2026-11-12）**：CI 单测 34 条全绿（`:guard-core:testDebugUnitTest` +
+`:guard-ui:testDebugUnitTest`），阶段 A 剩下 3 项手工 + 阶段 B 全部，仍需一台真机。
 
 | # | 操作 | 期望 | 失败指向 |
 |---|---|---|---|
@@ -57,8 +69,8 @@ adb logcat -c && adb logcat -s AFG:V AFG/Confirm:V AndroidRuntime:E
 | A5 `[CI]` | 点 `exportNotes · 脱敏` | 返回值里手机号被替换成 `[REDACTED:PHONE]`；logcat 里搜不到完整号码 | `redactOutput` 未生效 |
 | A6 `[CI]` | 点 `wipeAllNotes · 永久拒绝` | 不弹窗，日志 `DENIED_POLICY` / `FUNCTION_BLOCKED`，`retryable=false` | 阻断策略未命中 |
 | A7 `[CI]` | 点 `连发 9 次 deleteNote` | 前 5 次正常，第 6 次起 `RATE_LIMITED` 且带 `retryAfterMs` | 限流窗口/令牌桶参数 |
-| A8 | 触发 `deleteNote` 后**放着弹窗不动**，等 20 秒 | 超时后返回拒绝，弹窗自动消失；再点"允许"不改变结果 | 超时保护 / 弹窗残留 |
-| A9 | 按 Home 键回桌面，再触发确认类函数 | 拒绝，不静默放行 | Activity 生命周期（`detach` 后应为无界面即拒） |
+| A8 `[CI]` | 触发 `deleteNote` 后**放着弹窗不动**，等 20 秒 | 超时后返回拒绝；真机上还要确认弹窗自己消失 | 超时保护（弹窗残留需真机确认） |
+| A9 `[CI]` | 按 Home 键回桌面，再触发确认类函数 | 拒绝，不静默放行 | Activity 生命周期（`detach` 后应为无界面即拒） |
 | A10 `[CI]` | 点 `查看最近 20 条审计` | 每次调用一行，只有参数**指纹/形状**，无原文 | `AuditSink` 未接（`GuardConfig.apply()` 漏了） |
 
 补充两条只能靠"杀进程"来验的：

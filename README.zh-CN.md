@@ -237,7 +237,7 @@ ksp("io.github.yangyang2857-rgb:guard-ksp:0.1.0-alpha3")
 - [x] `guard-ui` 确认弹窗（`DialogConfirmationHandler`），sample 自己就在用
 - [x] `guard-cli` 审计导出（CSV / JSONL + summary），CI 有冒烟
 - [x] Maven Central —— `guard-core` / `guard-ksp` / `guard-audit` / `guard-ui` 的 `0.1.0-alpha3` 已发布，可直接从 `repo1.maven.org` 下载（GPG 签名，带 sources 与 javadoc）。坐标用 `io.github.yangyang2857-rgb`，因为 Portal 只放行与账号名一致的 `io.github.*`。流程见 [docs/PUBLISHING.md](docs/PUBLISHING.md)
-- [ ] **真机端到端验证** —— CI 没设备也没 Agent 宿主，拦截链还没对着真实 `AppFunctionService` 跑过。清单见 [docs/DEVICE_TEST.md](docs/DEVICE_TEST.md)
+- [ ] **真机端到端验证** —— 拦截链的**判定逻辑**已全部由 CI 单测覆盖（34 条，Robolectric：策略映射、校验、确认链路、超时/无界面拒绝、脱敏、限流、审计），但 CI 没设备也没 Agent 宿主，"对着真实 `AppFunctionService` 跑"和"弹窗点下去真的执行/真的没执行"还没验过。剩余手工项见 [docs/DEVICE_TEST.md](docs/DEVICE_TEST.md)
 
 早期阶段，最有价值的是对**注解设计**的反馈，不是 bug 报告。
 

@@ -277,7 +277,7 @@ Honest state of things:
 - [x] `guard-ui` — drop-in confirmation dialog (`DialogConfirmationHandler`), used by `sample` itself
 - [x] `guard-cli` — audit export to CSV / JSONL + summary, smoke tested in CI
 - [x] Maven Central — `0.1.0-alpha3` of `guard-core` / `guard-ksp` / `guard-audit` / `guard-ui` is published and downloadable from `repo1.maven.org` (GPG signed, sources + javadoc attached). Coordinates use `io.github.yangyang2857-rgb` because Portal only grants `io.github.*` for the account name. Process: [docs/PUBLISHING.md](docs/PUBLISHING.md)
-- [ ] **End-to-end verification on a real device** — CI has no device and no Agent host, so the interception chain has never run against a live `AppFunctionService`. Checklist: [docs/DEVICE_TEST.md](docs/DEVICE_TEST.md)
+- [ ] **End-to-end verification on a real device** — every **decision** in the chain is now covered by CI unit tests (34 of them, Robolectric: policy mapping, validation, confirmation flow, timeout / no-UI denial, redaction, rate limit, audit). What CI still cannot do is run against a live `AppFunctionService` and prove that tapping "allow" really executes (and "deny" really does not). Remaining manual items: [docs/DEVICE_TEST.md](docs/DEVICE_TEST.md)
 
 CI: [`build.yml`](.github/workflows/build.yml) runs on every push to `main` — assembles all four library modules plus `sample` / `guard-cli`, runs unit tests, smoke tests the CLI, verifies publication metadata. Details: [docs/CI.md](docs/CI.md)
 
