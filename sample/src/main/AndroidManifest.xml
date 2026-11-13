@@ -29,6 +29,16 @@
             android:name=".NoteAppFunctionService"
             android:exported="true"
             android:permission="android.permission.BIND_APP_FUNCTION_SERVICE">
+
+            <!-- 系统靠这两个 property 定位 assets/ 里的函数清单与 schema，缺一不可。
+                 schema：参数类型定义文件；v2：函数清单文件名。 -->
+            <property
+                android:name="android.app.appfunctions.schema"
+                android:value="app_functions_schema.xsd" />
+            <property
+                android:name="android.app.appfunctions.v2"
+                android:value="note_app_function_service.xml" />
+
             <intent-filter>
                 <action android:name="android.app.appfunctions.AppFunctionService" />
             </intent-filter>
