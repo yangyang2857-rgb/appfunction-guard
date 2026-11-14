@@ -1,5 +1,7 @@
 # AppFunction Guard
 
+**English** · [简体中文](README.zh-CN.md) · [Error codes](docs/ERROR_CODES.md) · [Changelog](CHANGELOG.md)
+
 **Android 16 lets AI agents call your app's functions. Guard is the lock, the doorbell, and the visitor log it forgot to include.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)

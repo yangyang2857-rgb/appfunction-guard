@@ -2,7 +2,7 @@
 
 **Android 16 让 AI Agent 直接调用你 App 里的函数。Guard 是那套机制忘了给你的锁、门铃和访客登记簿。**
 
-[English](README.md) · [错误码协议](docs/ERROR_CODES.md) · [变更日志](CHANGELOG.md)
+[English](README.md) · **简体中文** · [错误码协议](docs/ERROR_CODES.md) · [变更日志](CHANGELOG.md)
 
 ---
 
